@@ -5,20 +5,12 @@ from math import *
 from collections import defaultdict
 
 # Global variables
-input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-unique_output_name = '-NEWPROB2'
+#input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
+#unique_output_name = '-NEWPROB2'
 
 # States
 states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
-start_p = {
-        'Unk':     log(1./7.),
-        'A':       log(1./7.),
-        'ARK':     log(1./7.),
-        'BALBc':   log(1./7.),
-        'C3HHe':   log(1./7.),
-        'C57BL6N': log(1./7.),
-        'DBA2':    log(1./7.)
-    }
+start_p = {s: log(1/7.) for s in states}
 
 # Read in files
 #  SNP data
@@ -27,25 +19,10 @@ print 'Input file length: ' + str(len(obs))
 
 
 # Transition and emmission probabilities
-trans_p = {
-        'Unk':     {'Unk': log(0.46), 'A': log(0.09), 'ARK': log(0.09), 'BALBc': log(0.09), 'C3HHe': log(0.09), 'C57BL6N': log(0.09), 'DBA2': log(0.09)},
-        'A':       {'Unk': log(0.09), 'A': log(0.46), 'ARK': log(0.09), 'BALBc': log(0.09), 'C3HHe': log(0.09), 'C57BL6N': log(0.09), 'DBA2': log(0.09)},
-        'ARK':     {'Unk': log(0.09), 'A': log(0.09), 'ARK': log(0.46), 'BALBc': log(0.09), 'C3HHe': log(0.09), 'C57BL6N': log(0.09), 'DBA2': log(0.09)},
-        'BALBc':   {'Unk': log(0.09), 'A': log(0.09), 'ARK': log(0.09), 'BALBc': log(0.46), 'C3HHe': log(0.09), 'C57BL6N': log(0.09), 'DBA2': log(0.09)},
-        'C3HHe':   {'Unk': log(0.09), 'A': log(0.09), 'ARK': log(0.09), 'BALBc': log(0.09), 'C3HHe': log(0.46), 'C57BL6N': log(0.09), 'DBA2': log(0.09)},
-        'C57BL6N': {'Unk': log(0.09), 'A': log(0.09), 'ARK': log(0.09), 'BALBc': log(0.09), 'C3HHe': log(0.09), 'C57BL6N': log(0.46), 'DBA2': log(0.09)},
-        'DBA2':    {'Unk': log(0.09), 'A': log(0.09), 'ARK': log(0.09), 'BALBc': log(0.09), 'C3HHe': log(0.09), 'C57BL6N': log(0.09), 'DBA2': log(0.46)},
-    }
-
-emit_p = {
-        'Unk':     {'Unk':     log(0.95), '~Unk':     log(0.05)},
-        'A':       {'A':       log(0.95), '~A':       log(0.05)},
-        'ARK':     {'ARK':     log(0.95), '~ARK':     log(0.05)},
-        'BALBc':   {'BALBc':   log(0.95), '~BALBc':   log(0.05)},
-        'C3HHe':   {'C3HHe':   log(0.95), '~C3HHe':   log(0.05)},
-        'C57BL6N': {'C57BL6N': log(0.95), '~C57BL6N': log(0.05)},
-        'DBA2':    {'DBA2':    log(0.95), '~DBA2':    log(0.05)},
-    }
+#  Transition to same state = 0.46, to other state = 0.09
+#  Emit same state = 0.95, other state = 0.05 (labeled '~State')
+trans_p = {s_outer: {s_inner: log(0.46) if s_inner == s_outer else log(0.09) for s_inner in states} for s_outer in states}
+emit_p = {s: {s: log(0.95), '~'+s: log(0.05)} for s in states}
 
 # Output
 def print_path(path, title):
@@ -88,26 +65,10 @@ def output_path(path):
 #   foward-backward approach
 def em():
     #initialize sums and maximums to zero
-    trans_sums = {
-       'Unk'     : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'A'       : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'ARK'     : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'BALBc'   : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'C3HHe'   : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'C57BL6N' : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-       'DBA2'    : {'Unk': 0., 'A': 0., 'ARK': 0., 'BALBc': 0., 'C3HHe': 0., 'C57BL6N': 0., 'DBA2': 0.},
-    }
+    trans_sums = {s_outer: {s_inner: 0. for s_inner in states} for s_outer in states}
     trans_max = 0.
 
-    emit_sums = {
-       'Unk'     : {'Unk':     0., '~Unk':     0.},
-       'A'       : {'A':       0., '~A':       0.},
-       'ARK'     : {'ARK':     0., '~ARK':     0.},
-       'BALBc'   : {'BALBc':   0., '~BALBc':   0.},
-       'C3HHe'   : {'C3HHe':   0., '~C3HHe':   0.},
-       'C57BL6N' : {'C57BL6N': 0., '~C57BL6N': 0.},
-       'DBA2'    : {'DBA2':    0., '~DBA2':    0.},
-    }
+    emit_sums = {s: {s: 0., '~'+s: 0.} for s in states}
     emit_max = 0.
 
     #find new transition probabilities:

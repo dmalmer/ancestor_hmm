@@ -1,8 +1,18 @@
 
 import sys
+
+from collections import defaultdict
+from itertools import tee, izip
 from numpy import loadtxt, zeros
 from math import *
 from collections import defaultdict
+
+# Helper function (taken from https://docs.python.org/2/library/itertools.html#recipes)
+def pairwise(iterable):
+    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    a, b = tee(iterable)
+    next(b, None)
+    return izip(a, b)
 
 # Output
 def print_path(path, title):
@@ -107,6 +117,60 @@ def em():
     for m in max_seq:
         print m + ': ' + str(max_seq[m])
 
+def calc_new_trans_p(path, states):
+    #set minimum transition counts to 1 so we don't have any 0 probabilities
+    trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
+    for prev, curr in pairwise(path):
+        trans_counts[prev][curr] += 1
+
+    new_trans_p = {}
+    for s_outer in states:
+        new_trans_p[s_outer] = {}
+        for s_inner in states:
+            tot_trans = float(sum(trans_counts[s_outer].values()))
+            new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
+
+    return new_trans_p
+
+def calc_new_emit_p(path, obs, states, input_group):
+    # obs_counts[<state>] = total number of <state> appearances
+    # obs_counts[<~state>] = total number of <~state> appearances
+    obs_counts = defaultdict(int)
+    # path_counts[<state>] = total number of calculated <state> when <state> is observed
+    # path_counts[<~state>] = total number of calculated <state> when <state> is NOT observed
+    path_counts = defaultdict(int)
+
+    for i in range(len(obs)):
+        # obs_counts
+        for s in states:
+            obs_key = s
+            if s == 'Unk':
+                if obs[i][3] != input_group:
+                    obs_key = '~' + s
+            elif s not in obs[i][3].split('_'):
+                obs_key = '~' + s
+            obs_counts[obs_key] += 1
+
+        # path_counts
+        if path[i] in obs[i][3].split('_'):
+            path_counts[path[i]] += 1
+        else:
+            path_counts['~'+path[i]] += 1
+
+    print 'obs_counts'
+    print obs_counts
+    print 'path_counts'
+    print path_counts
+
+    # TODO: HANDLE 0 CASES
+    new_emit_p = {}
+    for s in states:
+        new_emit_p[s] = {}
+        new_emit_p[s][s] = float(path_counts[s]) / obs_counts[s]
+        new_emit_p[s]['~'+s] = float(path_counts['~'+s]) / obs_counts['~'+s]
+
+    return new_emit_p
+
 # Viterbi algorithm
 def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
     # intialize
@@ -155,7 +219,11 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
     # find maximum-likelihood path
     (prob, state) = max((V[i][s], s) for s in states)
 
-    return path[state]
+    print path
+    for s in states:
+        print s + ': ' + str(V[i][s])
+
+    return path[state], V
 
 if __name__ == "__main__":
     # Global variables
@@ -178,7 +246,18 @@ if __name__ == "__main__":
     emit_p = {s: {s: log(0.95), '~'+s: log(0.05)} for s in states}
 
     # Run algorithms
-    path = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
+    path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
 
     print_path(path, 'Viterbi')
     output_path(path)
+
+    new_trans_p = calc_new_trans_p(path, states)
+    print trans_p
+    print new_trans_p
+    print ''
+
+    new_emit_p = calc_new_emit_p(path, obs, states, input_group)
+    print emit_p
+    print new_emit_p
+
+    print states

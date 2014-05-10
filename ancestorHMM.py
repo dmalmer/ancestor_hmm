@@ -1,28 +1,8 @@
 
 import sys
-import numpy
+from numpy import loadtxt, zeros
 from math import *
 from collections import defaultdict
-
-# Global variables
-#input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-#unique_output_name = '-NEWPROB2'
-
-# States
-states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
-start_p = {s: log(1/7.) for s in states}
-
-# Read in files
-#  SNP data
-obs = numpy.loadtxt(sys.argv[1], dtype='string')
-print 'Input file length: ' + str(len(obs))
-
-
-# Transition and emmission probabilities
-#  Transition to same state = 0.46, to other state = 0.09
-#  Emit same state = 0.95, other state = 0.05 (labeled '~State')
-trans_p = {s_outer: {s_inner: log(0.46) if s_inner == s_outer else log(0.09) for s_inner in states} for s_outer in states}
-emit_p = {s: {s: log(0.95), '~'+s: log(0.05)} for s in states}
 
 # Output
 def print_path(path, title):
@@ -127,11 +107,10 @@ def em():
     for m in max_seq:
         print m + ': ' + str(max_seq[m])
 
-
 # Viterbi algorithm
-def viterbi():
+def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
     # intialize
-    V = numpy.zeros(len(obs), dtype={'names':states, 'formats':['f8']*len(states)})
+    V = zeros(len(obs), dtype={'names':states, 'formats':['f8']*len(states)})
     path = {}
 
     # obs[0] probabilities
@@ -158,7 +137,7 @@ def viterbi():
             if curr_state == 'Unk':
                 if obs[i][3] != input_group:
                     emit_key = '~' + curr_state
-            elif s not in obs[i][3].split('_'):
+            elif curr_state not in obs[i][3].split('_'):
                 emit_key = '~' + curr_state
 
             # the probability of a given state for a given observation is the maximum
@@ -178,8 +157,28 @@ def viterbi():
 
     return path[state]
 
-# Run algorithms
-path = viterbi()
+if __name__ == "__main__":
+    # Global variables
+    input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
+    unique_output_name = '-NEWPROB2'
 
-print_path(path, 'Viterbi')
-output_path(path)
+    # Read in SNP data
+    obs = loadtxt(sys.argv[1], dtype='string')
+    print 'Input file length: ' + str(len(obs))
+
+    # States
+    states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
+
+    # Start, transition, and emission probabilities
+    #  Equal start probability for each state
+    #  Transition to same state = 0.46, to other state = 0.09
+    #  Emit same state = 0.95, other state = 0.05 (labeled '~State')
+    start_p = {s: log(1/7.) for s in states}
+    trans_p = {s_outer: {s_inner: log(0.46) if s_inner == s_outer else log(0.09) for s_inner in states} for s_outer in states}
+    emit_p = {s: {s: log(0.95), '~'+s: log(0.05)} for s in states}
+
+    # Run algorithms
+    path = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
+
+    print_path(path, 'Viterbi')
+    output_path(path)

@@ -1,20 +1,32 @@
 
 import sys
 
-from collections import defaultdict
 from itertools import tee, izip
 from numpy import loadtxt, zeros
 from math import *
 from collections import defaultdict
 
-# Helper function (taken from https://docs.python.org/2/library/itertools.html#recipes)
+#-------------------------------------
+# Global variables and helper methods
+#-------------------------------------
+# Default probabilities
+#  --these need to be translated into log space
+def_start_p = 1/.7
+def_trans_in_p = .46
+def_trans_out_p = .09
+def_emit_same_p = .95
+def_emit_other_p = .05
+
+# Return a list of pairwise elements (taken from https://docs.python.org/2/library/itertools.html#recipes)
 def pairwise(iterable):
     "s -> (s0,s1), (s1,s2), (s2, s3), ..."
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
 
-# Output
+#----------------
+# Output methods
+#----------------
 def print_path(path, title):
     print ''
     print title
@@ -46,77 +58,9 @@ def output_path(path):
     print 'Output file length: ' + str(out_len)
     print 'Percentage change: ' + str(float(len(obs)-out_len)/float(len(obs)))
 
-# Baum-Welch algorithm for expectation maximization
-# **** THIS DOES NOT WORK ****
-#  I tried to write this mostly based on the wikipedia B-W page, but after a few
-#   generations it quickly ends up with transition probabilities to other states 
-#   higher than the transition probabilities to the same state, so something is wrong.
-#  I really recommend scrapping this entirely a re-writing with a cleaner 
-#   foward-backward approach
-def em():
-    #initialize sums and maximums to zero
-    trans_sums = {s_outer: {s_inner: 0. for s_inner in states} for s_outer in states}
-    trans_max = 0.
-
-    emit_sums = {s: {s: 0., '~'+s: 0.} for s in states}
-    emit_max = 0.
-
-    #find new transition probabilities:
-    #  at each observation, find the prob of transitioning from the prev obs to the current obs for each state transition
-    #  sum these state transition prob, and
-    #  keep track of the highest prob state path
-    max_seq = defaultdict(float)
-    prev_obs = obs[0][3]
-    for i in range(1, 100000):#len(obs)):
-        if i % 10000 == 0:
-            print i
-        cur_obs = obs[i][3]
-        max_prob = -9999.
-        for s in states:
-            cur_e = s
-            if s == 'Unk':
-                if cur_obs != input_group:
-                    cur_e = '~' + s
-            elif s not in cur_obs.split('_'):
-                cur_e = '~' + s
-            for p in states:
-                prev_e = p
-                if p == 'Unk':
-                    if prev_obs != input_group:
-                        prev_e = '~' + p
-                elif p not in prev_obs.split('_'):
-                    prev_e = '~' + p
-                trans_prob = start_p[p] + trans_p[p][s] + emit_p[s][cur_e] + emit_p[p][prev_e]
-                #print 's = ' + s + ', p = ' + p + ': ' + str(trans_prob)
-                trans_sums[p][s] += trans_prob
-                if trans_prob > max_prob:
-                    max_prob = trans_prob
-        trans_max += max_prob
-        prev_obs = cur_obs
-
-    #normalize transitions of each state to 1 in base 10, then move back to log space
-    print 'before:'
-    for t in trans_p.keys():
-        print t + ': ' + str(trans_p[t])
-    for k in trans_sums.keys():
-        sum = 0.
-        for s in states:
-            sum += exp(-1*trans_sums[k][s]/trans_max)
-        print k + ' sum: ' + str(sum)
-        new = 0.
-        for s in states:
-            trans_p[k][s] = (-1*trans_sums[k][s]/trans_max)/sum
-            print 'k=' + k + ',s=' + s +': ' + str(trans_p[k][s])
-            new += exp(-1*trans_sums[k][s]/trans_max)/sum
-        print new
-    print 'after:'
-    for t in trans_p.keys():
-        print t + ': ' + str(trans_p[t])
-
-    print ''
-    for m in max_seq:
-        print m + ': ' + str(max_seq[m])
-
+#-----------------------------
+# Calculate new probabilities
+#-----------------------------
 def calc_new_trans_p(path, states):
     #set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
@@ -157,21 +101,27 @@ def calc_new_emit_p(path, obs, states, input_group):
         else:
             path_counts['~'+path[i]] += 1
 
-    print 'obs_counts'
-    print obs_counts
-    print 'path_counts'
-    print path_counts
-
-    # TODO: HANDLE 0 CASES
     new_emit_p = {}
     for s in states:
         new_emit_p[s] = {}
-        new_emit_p[s][s] = float(path_counts[s]) / obs_counts[s]
-        new_emit_p[s]['~'+s] = float(path_counts['~'+s]) / obs_counts['~'+s]
+        # if we don't observe or calculate a state, use the default probabilities
+        if obs_counts[s] == 0 or path_counts[s] == 0:
+            new_emit_p[s][s] = log(def_emit_same_p)
+            new_emit_p[s]['~'+s] = log(def_emit_other_p)
+        else:
+            # normalize <state> and <~state> probabilities to one
+            state_p = float(path_counts[s]) / obs_counts[s]
+            notstate_p = float(path_counts['~'+s]) / obs_counts['~'+s]
+            normalizer = 1 / (state_p + notstate_p)
+            # don't allow probabilities of 1.0 and 0.0
+            new_emit_p[s][s] = log(min(normalizer * state_p, .99))
+            new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, .01))
 
     return new_emit_p
 
+#-------------------
 # Viterbi algorithm
+#-------------------
 def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
     # intialize
     V = zeros(len(obs), dtype={'names':states, 'formats':['f8']*len(states)})
@@ -190,7 +140,7 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
 
     # run viterbi
     for i in range(1, len(obs)):
-        if i%10000 == 0:
+        if i % 10000 == 0:
             print 'i = ' + str(i)
         new_path = {}
 
@@ -219,12 +169,11 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
     # find maximum-likelihood path
     (prob, state) = max((V[i][s], s) for s in states)
 
-    print path
-    for s in states:
-        print s + ': ' + str(V[i][s])
-
     return path[state], V
 
+#-------------
+# Main method
+#-------------
 if __name__ == "__main__":
     # Global variables
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
@@ -241,23 +190,42 @@ if __name__ == "__main__":
     #  Equal start probability for each state
     #  Transition to same state = 0.46, to other state = 0.09
     #  Emit same state = 0.95, other state = 0.05 (labeled '~State')
-    start_p = {s: log(1/7.) for s in states}
-    trans_p = {s_outer: {s_inner: log(0.46) if s_inner == s_outer else log(0.09) for s_inner in states} for s_outer in states}
-    emit_p = {s: {s: log(0.95), '~'+s: log(0.05)} for s in states}
+    start_p = {s: log(def_start_p) for s in states}
+    trans_p = {s_outer: {s_inner: log(def_trans_in_p) if s_inner == s_outer else log(def_trans_out_p) for s_inner in states} for s_outer in states}
+    emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}
 
     # Run algorithms
     path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
 
-    print_path(path, 'Viterbi')
-    output_path(path)
+    #print_path(path, 'Viterbi')
+    #output_path(path)
 
     new_trans_p = calc_new_trans_p(path, states)
+    print 'transition probabilities:'
+    print trans_p
+    print new_trans_p
+    print ''
+    trans_p = new_trans_p
+
+    new_emit_p = calc_new_emit_p(path, obs, states, input_group)
+    print 'emission probabilities:'
+    print emit_p
+    print new_emit_p
+    print ''
+    emit_p = new_emit_p
+
+    print '\n\n-------------------------RUN 2-------------------------\n\n'
+    # Run algorithms
+    path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
+
+    new_trans_p = calc_new_trans_p(path, states)
+    print 'transition probabilities:'
     print trans_p
     print new_trans_p
     print ''
 
     new_emit_p = calc_new_emit_p(path, obs, states, input_group)
+    print 'emission probabilities:'
     print emit_p
     print new_emit_p
-
-    print states
+    print ''

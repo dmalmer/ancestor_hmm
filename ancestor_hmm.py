@@ -58,9 +58,9 @@ def output_path(path):
     print 'Output file length: ' + str(out_len)
     print 'Percentage change: ' + str(float(len(obs)-out_len)/float(len(obs)))
 
-#-----------------------------
-# Calculate new probabilities
-#-----------------------------
+#---------------------
+# Probability methods
+#---------------------
 def calc_new_trans_p(path, states):
     #set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
@@ -118,6 +118,17 @@ def calc_new_emit_p(path, obs, states, input_group):
             new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, .01))
 
     return new_emit_p
+
+def prob_dist(old_probs, new_probs):
+    tot_dist = 0.
+    tot_probs = 0
+    for key in old_probs.keys():
+        for old_p, new_p in izip(old_probs[key].values(), new_probs[key].values()):
+            tot_dist += abs(old_p - new_p)
+            tot_probs += 1
+
+    # return average prob dist
+    return tot_dist / tot_probs
 
 #-------------------
 # Viterbi algorithm
@@ -195,37 +206,36 @@ if __name__ == "__main__":
     emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}
 
     # Run algorithms
-    path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
-
-    #print_path(path, 'Viterbi')
-    #output_path(path)
-
-    new_trans_p = calc_new_trans_p(path, states)
-    print 'transition probabilities:'
-    print trans_p
-    print new_trans_p
     print ''
-    trans_p = new_trans_p
+    tot_prob_dist = 10.
+    i = 0
+    while tot_prob_dist > 0.01 and i < 10:
+        tot_prob_dist = 0.
+        print '-----RUN %i-----' % i
+        path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
 
-    new_emit_p = calc_new_emit_p(path, obs, states, input_group)
-    print 'emission probabilities:'
-    print emit_p
-    print new_emit_p
-    print ''
-    emit_p = new_emit_p
+        #print_path(path, 'Viterbi')
+        #output_path(path)
 
-    print '\n\n-------------------------RUN 2-------------------------\n\n'
-    # Run algorithms
-    path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
+        new_trans_p = calc_new_trans_p(path, states)
+        print '\ntransition probabilities:'
+        print trans_p
+        print new_trans_p
+        tot_prob_dist += prob_dist(trans_p, new_trans_p)
+        print ''
+        trans_p = new_trans_p
 
-    new_trans_p = calc_new_trans_p(path, states)
-    print 'transition probabilities:'
-    print trans_p
-    print new_trans_p
-    print ''
+        new_emit_p = calc_new_emit_p(path, obs, states, input_group)
+        print 'emission probabilities:'
+        print emit_p
+        print new_emit_p
+        tot_prob_dist += prob_dist(emit_p, new_emit_p)
+        print ''
+        emit_p = new_emit_p
 
-    new_emit_p = calc_new_emit_p(path, obs, states, input_group)
-    print 'emission probabilities:'
-    print emit_p
-    print new_emit_p
-    print ''
+        print 'total prob distance:'
+        print tot_prob_dist
+
+        print ''
+
+        i += 1

@@ -2,7 +2,7 @@
 import sys
 
 from itertools import tee, izip
-from numpy import loadtxt, zeros
+from numpy import array, loadtxt, zeros
 from math import *
 from collections import defaultdict
 
@@ -16,6 +16,28 @@ def pairwise(iterable):
     next(b, None)
     return izip(a, b)
 
+
+# Count the number of hotspots between two chromosome positions
+def hotspots_count(chromosome, pos_start, pos_end, hotspot_dict):
+
+    # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
+    i_start = len(hotspot_dict[chromosome][pos_start-hotspot_dict[chromosome] > 0]) - 1
+    i_end = len(hotspot_dict[chromosome][pos_end-hotspot_dict[chromosome] > 0]) - 1
+    print 'starting i:'
+    print i_start
+    print 'ending i:'
+    print i_end
+
+    hs_count = ceil((i_end-i_start)/2.)
+
+    # if both the start and end indexes are on hotspots, we need to add 1 more to the count
+    if i_start % 2 == 1 and i_end % 2 == 1:
+        hs_count += 1
+
+    print 'hs_count:'
+    print hs_count
+
+    return hs_count
 
 #----------------
 # Output methods
@@ -131,7 +153,7 @@ def prob_dist(old_probs, new_probs):
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
+def viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict):
     # initialize
     prob_nodes = zeros(len(obs), dtype={'names': states, 'formats': ['f8']*len(states)})
     best_paths = {}
@@ -164,6 +186,9 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
                     emit_key = '~' + curr_state
             elif curr_state not in obs[i][3].split('_'):
                 emit_key = '~' + curr_state
+
+            # incorporate recombination hotspot data
+            #if obs[i]
 
             # the probability of a given state for a given observation is the maximum
             #  out of (prob prev_state) * (prob trans prev_state -> curr_state) * (prob emit curr_state)
@@ -204,6 +229,25 @@ if __name__ == "__main__":
     obs = loadtxt(sys.argv[1], dtype='string')
     print 'Input file length: ' + str(len(obs))
 
+    # Read in hotspot data
+    #  defaultdict list that begins with a 0 element rather than starting empty
+    #  all even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
+    hotspot_dict = defaultdict(lambda: [0])
+    with open('data/mouse_hotspots.csv', 'r') as f:
+        f.readline()
+        line = f.readline()
+        while line != '':
+            splits = line.split(',')
+            hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
+            line = f.readline()
+    #  convert to numpy arrays
+    for k, v in hotspot_dict.items():
+        hotspot_dict[k] = array(v)
+
+    print hotspot_dict['chr1'][:9]
+    print ['cold ', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold']
+    print hotspots_count('chr1', 3020000, 3085000, hotspot_dict)
+
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
 
@@ -221,7 +265,7 @@ if __name__ == "__main__":
     while tot_prob_dist > 0.01 and i < 10:
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % i
-        path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
+        path, v = viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict)
 
         new_trans_p = calc_new_trans_p(path, states)
         print '\nTransition probabilities'

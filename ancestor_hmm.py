@@ -6,23 +6,16 @@ from numpy import loadtxt, zeros
 from math import *
 from collections import defaultdict
 
-#-------------------------------------
-# Global variables and helper methods
-#-------------------------------------
-# Default probabilities
-#  --these need to be translated into log space
-def_start_p = 1/.7
-def_trans_in_p = .46
-def_trans_out_p = .09
-def_emit_same_p = .95
-def_emit_other_p = .05
-
+#----------------
+# Helper methods
+#----------------
 # Return a list of pairwise elements (taken from https://docs.python.org/2/library/itertools.html#recipes)
 def pairwise(iterable):
-    "s -> (s0,s1), (s1,s2), (s2, s3), ..."
+    # s -> (s0,s1), (s1,s2), (s2, s3), ...
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
+
 
 #----------------
 # Output methods
@@ -37,9 +30,10 @@ def print_path(path, title):
             cur = path[i]
     print ''
 
+
 def output_path(path):
     extension = sys.argv[1].rsplit('.', 1)[1]
-    out_file = open(sys.argv[1].split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension,'w')
+    out_file = open(sys.argv[1].split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
     cur = ''
     out_len = 0
     for i in range(len(path)):
@@ -57,6 +51,7 @@ def output_path(path):
 
     print 'Output file length: ' + str(out_len)
     print 'Percentage change: ' + str(float(len(obs)-out_len)/float(len(obs)))
+
 
 #---------------------
 # Probability methods
@@ -76,7 +71,8 @@ def calc_new_trans_p(path, states):
 
     return new_trans_p
 
-def calc_new_emit_p(path, obs, states, input_group):
+
+def calc_new_emit_p(path, obs, states, input_group, def_emit_same_p, def_emit_other_p):
     # obs_counts[<state>] = total number of <state> appearances
     # obs_counts[<~state>] = total number of <~state> appearances
     obs_counts = defaultdict(int)
@@ -119,6 +115,7 @@ def calc_new_emit_p(path, obs, states, input_group):
 
     return new_emit_p
 
+
 def prob_dist(old_probs, new_probs):
     tot_dist = 0.
     tot_probs = 0
@@ -130,30 +127,33 @@ def prob_dist(old_probs, new_probs):
     # return average prob dist
     return tot_dist / tot_probs
 
+
 #-------------------
 # Viterbi algorithm
 #-------------------
 def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
-    # intialize
-    V = zeros(len(obs), dtype={'names':states, 'formats':['f8']*len(states)})
-    path = {}
+    # initialize
+    prob_nodes = zeros(len(obs), dtype={'names': states, 'formats': ['f8']*len(states)})
+    best_paths = {}
 
     # obs[0] probabilities
     for s in states:
+        # for each state, the emission probability is either emit_p[state] or emit_p[~state]
         emit_key = s
         if s == 'Unk':
             if obs[0][3] != input_group:
                 emit_key = '~' + s
         elif s not in obs[0][3].split('_'):
             emit_key = '~' + s
-        V[0][s] = start_p[s] + emit_p[s][emit_key]
-        path[s] = [s]
+        # probability of a given state at obs[0] is the (start prob of state) * (emit prob of state)
+        prob_nodes[0][s] = start_p[s] + emit_p[s][emit_key]
+        best_paths[s] = [s]
 
-    # run viterbi
+    # rest of obs probabilities
     for i in range(1, len(obs)):
         if i % 10000 == 0:
             print 'i = ' + str(i)
-        new_path = {}
+        new_paths = {}
 
         # at every observation, find probabilities for each state
         for curr_state in states:
@@ -166,29 +166,39 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group):
                 emit_key = '~' + curr_state
 
             # the probability of a given state for a given observation is the maximum
-            #  out of (prob prev state) * (prob trans prev state -> cur state) * (prob emit cur state)
+            #  out of (prob prev_state) * (prob trans prev_state -> curr_state) * (prob emit curr_state)
             #  for all previous states
-            (prob, prev_state) = max((V[i-1][prev_state] + trans_p[prev_state][curr_state] + emit_p[curr_state][emit_key], prev_state) for prev_state in states)
+            (prob, prev_state) = max((prob_nodes[i-1][prev_state] + trans_p[prev_state][curr_state] +
+                                      emit_p[curr_state][emit_key], prev_state) for prev_state in states)
 
-            # keep track of probabilities in V and paths in new_path for each currState
-            V[i][curr_state] = prob
-            new_path[curr_state] = path[prev_state] + [curr_state]
+            # keep track of probabilities in V and paths in new_path for each curr_state
+            prob_nodes[i][curr_state] = prob
+            new_paths[curr_state] = best_paths[prev_state] + [curr_state]
 
         # update path with additional iteration
-        path = new_path
+        best_paths = new_paths
 
     # find maximum-likelihood path
-    (prob, state) = max((V[i][s], s) for s in states)
+    (prob, best_state) = max((prob_nodes[len(obs)-1][s], s) for s in states)
 
-    return path[state], V
+    return best_paths[best_state], prob_nodes
+
 
 #-------------
 # Main method
 #-------------
 if __name__ == "__main__":
-    # Global variables
+    # Input/output names
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-    unique_output_name = '-NEWPROB2'
+    unique_output_name = '-NEWPROB'
+
+    # Default probabilities
+    #  --these need to be translated into log space
+    def_start_p = 1/.7
+    def_trans_in_p = .46
+    def_trans_out_p = .09
+    def_emit_same_p = .95
+    def_emit_other_p = .05
 
     # Read in SNP data
     obs = loadtxt(sys.argv[1], dtype='string')
@@ -206,36 +216,30 @@ if __name__ == "__main__":
     emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}
 
     # Run algorithms
-    print ''
     tot_prob_dist = 10.
     i = 0
     while tot_prob_dist > 0.01 and i < 10:
         tot_prob_dist = 0.
-        print '-----RUN %i-----' % i
+        print '\n---- RUN %i ----' % i
         path, V = viterbi(obs, states, start_p, trans_p, emit_p, input_group)
 
-        #print_path(path, 'Viterbi')
-        #output_path(path)
-
         new_trans_p = calc_new_trans_p(path, states)
-        print '\ntransition probabilities:'
-        print trans_p
-        print new_trans_p
+        print '\nTransition probabilities'
+        print '  Before: ' + str(trans_p)
+        print '  After:  ' + str(new_trans_p)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
-        print ''
         trans_p = new_trans_p
 
-        new_emit_p = calc_new_emit_p(path, obs, states, input_group)
-        print 'emission probabilities:'
-        print emit_p
-        print new_emit_p
+        new_emit_p = calc_new_emit_p(path, obs, states, input_group, def_emit_same_p, def_emit_other_p)
+        print 'Emission probabilities'
+        print '  Before: ' + str(emit_p)
+        print '  After:  ' + str(new_emit_p)
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
-        print ''
         emit_p = new_emit_p
 
-        print 'total prob distance:'
-        print tot_prob_dist
-
-        print ''
+        print 'Total probability distance: %.3f' % tot_prob_dist
 
         i += 1
+
+    print_path(path, 'Viterbi')
+    output_path(path)

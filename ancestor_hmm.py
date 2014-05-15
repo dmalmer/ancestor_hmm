@@ -18,24 +18,16 @@ def pairwise(iterable):
 
 
 # Count the number of hotspots between two chromosome positions
-def hotspots_count(chromosome, pos_start, pos_end, hotspot_dict):
-
+def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
     # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
     i_start = len(hotspot_dict[chromosome][pos_start-hotspot_dict[chromosome] > 0]) - 1
     i_end = len(hotspot_dict[chromosome][pos_end-hotspot_dict[chromosome] > 0]) - 1
-    print 'starting i:'
-    print i_start
-    print 'ending i:'
-    print i_end
 
     hs_count = ceil((i_end-i_start)/2.)
 
     # if both the start and end indexes are on hotspots, we need to add 1 more to the count
     if i_start % 2 == 1 and i_end % 2 == 1:
         hs_count += 1
-
-    print 'hs_count:'
-    print hs_count
 
     return hs_count
 
@@ -153,7 +145,7 @@ def prob_dist(old_probs, new_probs):
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict):
+def viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group):
     # initialize
     prob_nodes = zeros(len(obs), dtype={'names': states, 'formats': ['f8']*len(states)})
     best_paths = {}
@@ -177,6 +169,8 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict):
             print 'i = ' + str(i)
         new_paths = {}
 
+        hotspots_count = count_hotspots(obs[i][0], int(obs[i-1][1]), int(obs[i][1]), hotspot_dict)
+
         # at every observation, find probabilities for each state
         for curr_state in states:
             # for each state, the emission probability is either emit_p[state] or emit_p[~state]
@@ -187,14 +181,21 @@ def viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict):
             elif curr_state not in obs[i][3].split('_'):
                 emit_key = '~' + curr_state
 
-            # incorporate recombination hotspot data
-            #if obs[i]
-
             # the probability of a given state for a given observation is the maximum
             #  out of (prob prev_state) * (prob trans prev_state -> curr_state) * (prob emit curr_state)
             #  for all previous states
-            (prob, prev_state) = max((prob_nodes[i-1][prev_state] + trans_p[prev_state][curr_state] +
-                                      emit_p[curr_state][emit_key], prev_state) for prev_state in states)
+            state_probabilities = []
+            for prev_state in states:
+                # incorporate recombination hotspot data
+                hotspot_fi = 1
+                if prev_state != curr_state:
+                    # only apply hotspot fold increase to transition probabilities from one state to a different state
+                    hotspot_fi = max(fold_increase_per_hotspot * hotspots_count, 1)
+
+                state_probabilities.append((prob_nodes[i-1][prev_state] + trans_p[prev_state][curr_state] +
+                                            log(hotspot_fi) + emit_p[curr_state][emit_key], prev_state))
+
+            (prob, prev_state) = max(state_probabilities)
 
             # keep track of probabilities in V and paths in new_path for each curr_state
             prob_nodes[i][curr_state] = prob
@@ -217,13 +218,14 @@ if __name__ == "__main__":
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
     unique_output_name = '-NEWPROB'
 
-    # Default probabilities
+    # Starting probabilities
     #  --these need to be translated into log space
     def_start_p = 1/.7
     def_trans_in_p = .46
     def_trans_out_p = .09
     def_emit_same_p = .95
     def_emit_other_p = .05
+    def_fold_increase_per_hotspot = 2
 
     # Read in SNP data
     obs = loadtxt(sys.argv[1], dtype='string')
@@ -244,9 +246,9 @@ if __name__ == "__main__":
     for k, v in hotspot_dict.items():
         hotspot_dict[k] = array(v)
 
-    print hotspot_dict['chr1'][:9]
-    print ['cold ', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold']
-    print hotspots_count('chr1', 3020000, 3085000, hotspot_dict)
+    #print hotspot_dict['chr1'][:9]
+    #print ['cold ', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold', 'hot ', 'cold']
+    #print hotspots_count('chr1', 3020000, 3095000, hotspot_dict)
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
@@ -259,13 +261,16 @@ if __name__ == "__main__":
     trans_p = {s_outer: {s_inner: log(def_trans_in_p) if s_inner == s_outer else log(def_trans_out_p) for s_inner in states} for s_outer in states}
     emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}
 
+    # Hotspot fold increase
+    fold_increase_per_hotspot = def_fold_increase_per_hotspot
+
     # Run algorithms
     tot_prob_dist = 10.
     i = 0
     while tot_prob_dist > 0.01 and i < 10:
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % i
-        path, v = viterbi(obs, states, start_p, trans_p, emit_p, input_group, hotspot_dict)
+        path, v = viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group)
 
         new_trans_p = calc_new_trans_p(path, states)
         print '\nTransition probabilities'

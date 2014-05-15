@@ -35,59 +35,59 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
 #----------------
 # Output methods
 #----------------
-def print_path(path, title):
+def print_ancestors(ancestors, SNPs, title):
     print ''
     print title
     cur = ''
-    for i in range(len(path)):
-        if cur != path[i]:
-            print str(obs[i][1]) + ': ' + path[i]
-            cur = path[i]
+    for i in range(len(ancestors)):
+        if cur != ancestors[i]:
+            print str(SNPs[i][1]) + ': ' + ancestors[i]
+            cur = ancestors[i]
 
 
-def output_path(path):
+def write_ancestors_to_file(ancestors, SNPs):
     extension = sys.argv[1].rsplit('.', 1)[1]
     out_file = open(sys.argv[1].split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
     cur = ''
     out_len = 0
-    for i in range(len(path)):
-        if cur != path[i]:
+    for i in range(len(ancestors)):
+        if cur != ancestors[i]:
             if i > 0:
                 #write ending position and ancestor of prev line
-                out_file.write(obs[i-1][2] + '\t' + path[i-1] + '\n')
+                out_file.write(SNPs[i-1][2] + '\t' + ancestors[i-1] + '\n')
             #write chromosome and starting position of current line
-            out_file.write(obs[i][0] + '\t' + obs[i][1] + '\t')
-            cur = path[i]
+            out_file.write(SNPs[i][0] + '\t' + SNPs[i][1] + '\t')
+            cur = ancestors[i]
             out_len += 1
     #write ending position and ancestor of last line
-    out_file.write(obs[len(path)-1][2] + '\t' + path[len(path)-1] + '\n')
+    out_file.write(SNPs[len(ancestors)-1][2] + '\t' + ancestors[len(ancestors)-1] + '\n')
     out_file.close()
 
     print '\nOutput file length: ' + str(out_len)
-    print 'Percentage change: ' + str(float(len(obs)-out_len)/float(len(obs)))
+    print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
 
 
 #---------------------
 # Probability methods
 #---------------------
-def calc_new_trans_p_and_hs_fi(path, obs, states, hotspot_dict):
+def calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict):
     tot_hotspots = 0
     tot_hs_trans = 0
     tot_hs_not_trans = 0
     #set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
-    for ((path_prev, path_curr), (pos_prev, pos_curr), (chr_prev, chr_curr)) in \
-            zip(pairwise(path), pairwise(obs[:,1]), pairwise(obs[:,0])):
+    for ((anc_prev, anc_curr), (pos_prev, pos_curr), (chr_prev, chr_curr)) in \
+            zip(pairwise(ancestors), pairwise(SNPs[:,1]), pairwise(SNPs[:,0])):
         if chr_prev == chr_curr:
             hotspots_count = count_hotspots(chr_curr, int(pos_prev), int(pos_curr), hotspot_dict)
             if hotspots_count > 0:
                 tot_hotspots += hotspots_count
-                if path_prev != path_curr:
+                if anc_prev != anc_curr:
                     tot_hs_trans += 1
                 else:
                     tot_hs_not_trans += 1
 
-            trans_counts[path_prev][path_curr] += 1
+            trans_counts[anc_prev][anc_curr] += 1
 
     print 'tot_hotspots:'
     print tot_hotspots
@@ -108,42 +108,42 @@ def calc_new_trans_p_and_hs_fi(path, obs, states, hotspot_dict):
     return new_trans_p, new_hs_fi
 
 
-def calc_new_emit_p(path, obs, states, input_group, def_emit_same_p, def_emit_other_p):
-    # obs_counts[<state>] = total number of <state> appearances
-    # obs_counts[<~state>] = total number of <~state> appearances
-    obs_counts = defaultdict(int)
-    # path_counts[<state>] = total number of calculated <state> when <state> is observed
-    # path_counts[<~state>] = total number of calculated <state> when <state> is NOT observed
-    path_counts = defaultdict(int)
+def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p):
+    # SNP_counts[<state>] = total number of <state> appearances
+    # SNP_counts[<~state>] = total number of <~state> appearances
+    SNP_counts = defaultdict(int)
+    # ancestor_counts[<state>] = total number of calculated <state> when <state> is observed
+    # ancestor_counts[<~state>] = total number of calculated <state> when <state> is NOT observed
+    ancestor_counts = defaultdict(int)
 
-    for i in range(len(obs)):
-        # obs_counts
+    for i in range(len(SNPs)):
+        # SNP_counts
         for s in states:
-            obs_key = s
+            SNP_key = s
             if s == 'Unk':
-                if obs[i][3] != input_group:
-                    obs_key = '~' + s
-            elif s not in obs[i][3].split('_'):
-                obs_key = '~' + s
-            obs_counts[obs_key] += 1
+                if SNPs[i][3] != input_group:
+                    SNP_key = '~' + s
+            elif s not in SNPs[i][3].split('_'):
+                SNP_key = '~' + s
+            SNP_counts[SNP_key] += 1
 
-        # path_counts
-        if path[i] in obs[i][3].split('_'):
-            path_counts[path[i]] += 1
+        # ancestor_counts
+        if ancestors[i] in SNPs[i][3].split('_'):
+            ancestor_counts[ancestors[i]] += 1
         else:
-            path_counts['~'+path[i]] += 1
+            ancestor_counts['~'+ancestors[i]] += 1
 
     new_emit_p = {}
     for s in states:
         new_emit_p[s] = {}
         # if we don't observe or calculate a state, use the default probabilities
-        if obs_counts[s] == 0 or path_counts[s] == 0:
+        if SNP_counts[s] == 0 or ancestor_counts[s] == 0:
             new_emit_p[s][s] = log(def_emit_same_p)
             new_emit_p[s]['~'+s] = log(def_emit_other_p)
         else:
             # normalize <state> and <~state> probabilities to one
-            state_p = float(path_counts[s]) / obs_counts[s]
-            notstate_p = float(path_counts['~'+s]) / obs_counts['~'+s]
+            state_p = float(ancestor_counts[s]) / SNP_counts[s]
+            notstate_p = float(ancestor_counts['~'+s]) / SNP_counts['~'+s]
             normalizer = 1 / (state_p + notstate_p)
             # don't allow probabilities of 1.0 and 0.0
             new_emit_p[s][s] = log(min(normalizer * state_p, .99))
@@ -167,43 +167,43 @@ def prob_dist(old_probs, new_probs):
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group):
+def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group):
     # initialize
-    prob_nodes = zeros(len(obs), dtype={'names': states, 'formats': ['f8']*len(states)})
-    best_paths = {}
+    prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
+    ancestors_by_state = {}
 
-    # obs[0] probabilities
+    # SNPs[0] probabilities
     for s in states:
         # for each state, the emission probability is either emit_p[state] or emit_p[~state]
         emit_key = s
         if s == 'Unk':
-            if obs[0][3] != input_group:
+            if SNPs[0][3] != input_group:
                 emit_key = '~' + s
-        elif s not in obs[0][3].split('_'):
+        elif s not in SNPs[0][3].split('_'):
             emit_key = '~' + s
-        # probability of a given state at obs[0] is the (start prob of state) * (emit prob of state)
+        # probability of a given state at SNPs[0] is the (start prob of state) * (emit prob of state)
         prob_nodes[0][s] = start_p[s] + emit_p[s][emit_key]
-        best_paths[s] = [s]
+        ancestors_by_state[s] = [s]
 
-    # rest of obs probabilities
-    for i in range(1, len(obs)):
+    # rest of SNP probabilities
+    for i in range(1, len(SNPs)):
         if i % 10000 == 0:
             print 'i = ' + str(i)
-        new_paths = {}
+        new_ancestors_by_state = {}
 
-        hotspots_count = count_hotspots(obs[i][0], int(obs[i-1][1]), int(obs[i][1]), hotspot_dict)
+        hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
 
-        # at every observation, find probabilities for each state
+        # at every SNP, find probabilities for each state
         for curr_state in states:
             # for each state, the emission probability is either emit_p[state] or emit_p[~state]
             emit_key = curr_state
             if curr_state == 'Unk':
-                if obs[i][3] != input_group:
+                if SNPs[i][3] != input_group:
                     emit_key = '~' + curr_state
-            elif curr_state not in obs[i][3].split('_'):
+            elif curr_state not in SNPs[i][3].split('_'):
                 emit_key = '~' + curr_state
 
-            # the probability of a given state for a given observation is the maximum
+            # the probability of a given state for a given SNP is the maximum
             #  out of (prob prev_state) * (prob trans prev_state -> curr_state) * (prob emit curr_state)
             #  for all previous states
             state_probabilities = []
@@ -219,17 +219,17 @@ def viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, ho
 
             (prob, prev_state) = max(state_probabilities)
 
-            # keep track of probabilities in V and paths in new_path for each curr_state
+            # keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
             prob_nodes[i][curr_state] = prob
-            new_paths[curr_state] = best_paths[prev_state] + [curr_state]
+            new_ancestors_by_state[curr_state] = ancestors_by_state[prev_state] + [curr_state]
 
-        # update path with additional iteration
-        best_paths = new_paths
+        # update ancestors with additional iteration
+        ancestors_by_state = new_ancestors_by_state
 
-    # find maximum-likelihood path
-    (prob, best_state) = max((prob_nodes[len(obs)-1][s], s) for s in states)
+    # find maximum-likelihood ancestors
+    (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
 
-    return best_paths[best_state], prob_nodes
+    return ancestors_by_state[best_state]
 
 
 #-------------
@@ -250,8 +250,8 @@ if __name__ == "__main__":
     def_fold_increase_per_hotspot = 40
 
     # Read in SNP data
-    obs = loadtxt(sys.argv[1], dtype='string')
-    print 'Input file length: ' + str(len(obs))
+    SNPs = loadtxt(sys.argv[1], dtype='string')
+    print 'Input file length: ' + str(len(SNPs))
 
     # Read in hotspot data
     #  defaultdict list that begins with a 0 element rather than starting empty
@@ -289,12 +289,12 @@ if __name__ == "__main__":
     # Run algorithms
     tot_prob_dist = 10.
     i = 0
-    while tot_prob_dist > 0.01 and i < 10:
+    while tot_prob_dist > 0.01 and i < 2:
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % i
-        path, v = viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group)
+        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group)
 
-        new_trans_p, new_hs_fi = calc_new_trans_p_and_hs_fi(path, obs, states, hotspot_dict)
+        new_trans_p, new_hs_fi = calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict)
         print '\nHotspot fold increase'
         print '  Before: ' + str(fold_increase_per_hotspot)
         print '  After:  ' + str(new_hs_fi)
@@ -305,7 +305,7 @@ if __name__ == "__main__":
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
         trans_p = new_trans_p
 
-        new_emit_p = calc_new_emit_p(path, obs, states, input_group, def_emit_same_p, def_emit_other_p)
+        new_emit_p = calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p)
         print 'Emission probabilities'
         print '  Before: ' + str(emit_p)
         print '  After:  ' + str(new_emit_p)
@@ -316,5 +316,5 @@ if __name__ == "__main__":
 
         i += 1
 
-    #print_path(path, 'Viterbi')
-    output_path(path)
+    print_ancestors(ancestors, SNPs, 'Viterbi')
+    write_ancestors_to_file(ancestors, SNPs)

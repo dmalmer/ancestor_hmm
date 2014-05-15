@@ -31,6 +31,7 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
 
     return hs_count
 
+
 #----------------
 # Output methods
 #----------------
@@ -42,7 +43,6 @@ def print_path(path, title):
         if cur != path[i]:
             print str(obs[i][1]) + ': ' + path[i]
             cur = path[i]
-    print ''
 
 
 def output_path(path):
@@ -63,18 +63,38 @@ def output_path(path):
     out_file.write(obs[len(path)-1][2] + '\t' + path[len(path)-1] + '\n')
     out_file.close()
 
-    print 'Output file length: ' + str(out_len)
+    print '\nOutput file length: ' + str(out_len)
     print 'Percentage change: ' + str(float(len(obs)-out_len)/float(len(obs)))
 
 
 #---------------------
 # Probability methods
 #---------------------
-def calc_new_trans_p(path, states):
+def calc_new_trans_p_and_hs_fi(path, obs, states, hotspot_dict):
+    tot_hotspots = 0
+    tot_hs_trans = 0
+    tot_hs_not_trans = 0
     #set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
-    for prev, curr in pairwise(path):
-        trans_counts[prev][curr] += 1
+    for ((path_prev, path_curr), (pos_prev, pos_curr), (chr_prev, chr_curr)) in \
+            zip(pairwise(path), pairwise(obs[:,1]), pairwise(obs[:,0])):
+        if chr_prev == chr_curr:
+            hotspots_count = count_hotspots(chr_curr, int(pos_prev), int(pos_curr), hotspot_dict)
+            if hotspots_count > 0:
+                tot_hotspots += hotspots_count
+                if path_prev != path_curr:
+                    tot_hs_trans += 1
+                else:
+                    tot_hs_not_trans += 1
+
+            trans_counts[path_prev][path_curr] += 1
+
+    print 'tot_hotspots:'
+    print tot_hotspots
+    print 'tot_hs_trans:'
+    print tot_hs_trans
+    print 'tot_hs_not_trans:'
+    print tot_hs_not_trans
 
     new_trans_p = {}
     for s_outer in states:
@@ -83,7 +103,9 @@ def calc_new_trans_p(path, states):
             tot_trans = float(sum(trans_counts[s_outer].values()))
             new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
 
-    return new_trans_p
+    new_hs_fi = max(float(tot_hs_trans)/max(tot_hs_not_trans, 1), 1.)
+
+    return new_trans_p, new_hs_fi
 
 
 def calc_new_emit_p(path, obs, states, input_group, def_emit_same_p, def_emit_other_p):
@@ -225,7 +247,7 @@ if __name__ == "__main__":
     def_trans_out_p = .09
     def_emit_same_p = .95
     def_emit_other_p = .05
-    def_fold_increase_per_hotspot = 2
+    def_fold_increase_per_hotspot = 40
 
     # Read in SNP data
     obs = loadtxt(sys.argv[1], dtype='string')
@@ -272,10 +294,14 @@ if __name__ == "__main__":
         print '\n---- RUN %i ----' % i
         path, v = viterbi(obs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group)
 
-        new_trans_p = calc_new_trans_p(path, states)
-        print '\nTransition probabilities'
+        new_trans_p, new_hs_fi = calc_new_trans_p_and_hs_fi(path, obs, states, hotspot_dict)
+        print '\nHotspot fold increase'
+        print '  Before: ' + str(fold_increase_per_hotspot)
+        print '  After:  ' + str(new_hs_fi)
+        print 'Transition probabilities'
         print '  Before: ' + str(trans_p)
         print '  After:  ' + str(new_trans_p)
+        fold_increase_per_hotspot = new_hs_fi
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
         trans_p = new_trans_p
 
@@ -290,5 +316,5 @@ if __name__ == "__main__":
 
         i += 1
 
-    print_path(path, 'Viterbi')
+    #print_path(path, 'Viterbi')
     output_path(path)

@@ -1,198 +1,13 @@
 
 import sys
-import os.path
 
-from itertools import tee, izip
-from numpy import array, loadtxt, zeros
-from math import *
 from collections import defaultdict
+from math import log
+from numpy import array, loadtxt, zeros
 
-
-#-----------------
-# Utility methods
-#-----------------
-# Return a list of pairwise elements (taken from https://docs.python.org/2/library/itertools.html#recipes)
-def pairwise(iterable):
-    # s -> (s0,s1), (s1,s2), (s2, s3), ...
-    a, b = tee(iterable)
-    next(b, None)
-    return izip(a, b)
-
-
-# Count the number of hotspots between two chromosome positions
-def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
-    # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
-    i_start = len(hotspot_dict[chromosome][pos_start-hotspot_dict[chromosome] > 0]) - 1
-    i_end = len(hotspot_dict[chromosome][pos_end-hotspot_dict[chromosome] > 0]) - 1
-
-    hs_count = ceil((i_end-i_start)/2.)
-
-    # if both the start and end indexes are on hotspots, we need to add 1 more to the count
-    if i_start % 2 == 1 and i_end % 2 == 1:
-        hs_count += 1
-
-    return hs_count
-
-
-# Generator to loop over only unique ancestors
-def unique_ancestors(ancestors, SNPs):
-    curr_i = 0
-    while curr_i < len(ancestors):
-        start_i = curr_i
-        curr_i += 1
-        while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
-            curr_i += 1
-
-        yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
-
-
-#----------------
-# Output methods
-#----------------
-def print_ancestors(ancestors, SNPs, title):
-    print ''
-    print title
-    cur = ''
-    for i in range(len(ancestors)):
-        if cur != ancestors[i]:
-            print str(SNPs[i][1]) + ': ' + ancestors[i]
-            cur = ancestors[i]
-
-
-def write_ancestors_to_file(ancestors, SNPs):
-    extension = sys.argv[1].rsplit('.', 1)[1]
-    out_file = open(sys.argv[1].split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
-
-    out_len = 0
-    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
-        out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\n')
-        out_len += 1
-    out_file.close()
-
-    print '\nOutput file length: ' + str(out_len)
-    print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
-
-
-def write_statistics(filename_in, ancestors, SNPs, states, starting_params, final_hs_fi):
-    len_before = len(SNPs)
-    len_after = 0
-    anc_counts = defaultdict(int)
-
-    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
-        anc_counts[ancestor] += 1
-        len_after += 1
-
-    line = '%i\t%i\t%.3f\t%.2f\t%.2f\t%.2f\t%.2f\t%.1f\t%.1f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n' % \
-           (len_before, len_after, float(len_before-len_after)/len_before, starting_params[0], starting_params[1],
-            starting_params[2], starting_params[3], starting_params[4], final_hs_fi, anc_counts['A']/float(len_after),
-            anc_counts['ARK']/float(len_after), anc_counts['BALBc']/float(len_after),
-            anc_counts['C3HHe']/float(len_after), anc_counts['C57BL6N']/float(len_after),
-            anc_counts['DBA2']/float(len_after), anc_counts['Unk']/float(len_after))
-
-    filename_out = '/'.join(filename_in.split('/')[:-1]) + '/STATS_' + filename_in.split('/')[-1]
-    if not os.path.isfile(filename_out):
-        line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI_start\tHS_FI_end\t' + \
-               '%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\n' + line
-
-    with open(filename_out, 'a') as f:
-        f.write(line)
-
-
-#---------------------
-# Probability methods
-#---------------------
-def calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict):
-    tot_hotspots = 0
-    tot_hs_trans = 0
-    tot_hs_not_trans = 0
-    #set minimum transition counts to 1 so we don't have any 0 probabilities
-    trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
-    for ((anc_prev, anc_curr), (pos_prev, pos_curr), (chr_prev, chr_curr)) in \
-            zip(pairwise(ancestors), pairwise(SNPs[:,1]), pairwise(SNPs[:,0])):
-        if chr_prev == chr_curr:
-            hotspots_count = count_hotspots(chr_curr, int(pos_prev), int(pos_curr), hotspot_dict)
-            if hotspots_count > 0:
-                tot_hotspots += hotspots_count
-                if anc_prev != anc_curr:
-                    tot_hs_trans += 1
-                else:
-                    tot_hs_not_trans += 1
-
-            trans_counts[anc_prev][anc_curr] += 1
-
-    print 'tot_hotspots:'
-    print tot_hotspots
-    print 'tot_hs_trans:'
-    print tot_hs_trans
-    print 'tot_hs_not_trans:'
-    print tot_hs_not_trans
-
-    new_trans_p = {}
-    for s_outer in states:
-        new_trans_p[s_outer] = {}
-        for s_inner in states:
-            tot_trans = float(sum(trans_counts[s_outer].values()))
-            new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
-
-    new_hs_fi = max(float(tot_hs_trans)/max(tot_hs_not_trans, 1), 1.)
-
-    return new_trans_p, new_hs_fi
-
-
-def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p):
-    # SNP_counts[<state>] = total number of <state> appearances
-    # SNP_counts[<~state>] = total number of <~state> appearances
-    SNP_counts = defaultdict(int)
-    # ancestor_counts[<state>] = total number of calculated <state> when <state> is observed
-    # ancestor_counts[<~state>] = total number of calculated <state> when <state> is NOT observed
-    ancestor_counts = defaultdict(int)
-
-    for i in range(len(SNPs)):
-        # SNP_counts
-        for s in states:
-            SNP_key = s
-            if s == 'Unk':
-                if SNPs[i][3] != input_group:
-                    SNP_key = '~' + s
-            elif s not in SNPs[i][3].split('_'):
-                SNP_key = '~' + s
-            SNP_counts[SNP_key] += 1
-
-        # ancestor_counts
-        if ancestors[i] in SNPs[i][3].split('_'):
-            ancestor_counts[ancestors[i]] += 1
-        else:
-            ancestor_counts['~'+ancestors[i]] += 1
-
-    new_emit_p = {}
-    for s in states:
-        new_emit_p[s] = {}
-        # if we don't observe or calculate a state, use the default probabilities
-        if SNP_counts[s] == 0 or ancestor_counts[s] == 0:
-            new_emit_p[s][s] = log(def_emit_same_p)
-            new_emit_p[s]['~'+s] = log(def_emit_other_p)
-        else:
-            # normalize <state> and <~state> probabilities to one
-            state_p = float(ancestor_counts[s]) / SNP_counts[s]
-            notstate_p = float(ancestor_counts['~'+s]) / SNP_counts['~'+s]
-            normalizer = 1 / (state_p + notstate_p)
-            # don't allow probabilities of 1.0 and 0.0
-            new_emit_p[s][s] = log(min(normalizer * state_p, .99))
-            new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, .01))
-
-    return new_emit_p
-
-
-def prob_dist(old_probs, new_probs):
-    tot_dist = 0.
-    tot_probs = 0
-    for key in old_probs.keys():
-        for old_p, new_p in izip(old_probs[key].values(), new_probs[key].values()):
-            tot_dist += abs(old_p - new_p)
-            tot_probs += 1
-
-    # return average prob dist
-    return tot_dist / tot_probs
+from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
+from hmm_prob import calc_new_emit_p, calc_new_trans_p_and_hs_fi, prob_dist
+from hmm_util import count_hotspots
 
 
 #-------------------
@@ -351,7 +166,7 @@ if __name__ == "__main__":
         i += 1
 
     print_ancestors(ancestors, SNPs, 'Viterbi')
-    write_ancestors_to_file(ancestors, SNPs)
+    write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
 
     write_statistics(sys.argv[1], ancestors, SNPs, states, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
                      def_emit_other_p, def_fold_increase_per_hotspot), fold_increase_per_hotspot)

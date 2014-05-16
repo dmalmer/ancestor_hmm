@@ -6,6 +6,7 @@ from numpy import array, loadtxt, zeros
 from math import *
 from collections import defaultdict
 
+
 #----------------
 # Helper methods
 #----------------
@@ -32,6 +33,19 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
     return hs_count
 
 
+# Generator to loop over only unique ancestors
+def unique_ancestors(ancestors, SNPs):
+    curr_i = 0
+    while curr_i < len(ancestors):
+        start_i = curr_i
+        curr_i += 1
+        while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
+            curr_i += 1
+
+        yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
+
+
+
 #----------------
 # Output methods
 #----------------
@@ -48,19 +62,11 @@ def print_ancestors(ancestors, SNPs, title):
 def write_ancestors_to_file(ancestors, SNPs):
     extension = sys.argv[1].rsplit('.', 1)[1]
     out_file = open(sys.argv[1].split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
-    cur = ''
+
     out_len = 0
-    for i in range(len(ancestors)):
-        if cur != ancestors[i]:
-            if i > 0:
-                #write ending position and ancestor of prev line
-                out_file.write(SNPs[i-1][2] + '\t' + ancestors[i-1] + '\n')
-            #write chromosome and starting position of current line
-            out_file.write(SNPs[i][0] + '\t' + SNPs[i][1] + '\t')
-            cur = ancestors[i]
-            out_len += 1
-    #write ending position and ancestor of last line
-    out_file.write(SNPs[len(ancestors)-1][2] + '\t' + ancestors[len(ancestors)-1] + '\n')
+    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
+        out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\n')
+        out_len += 1
     out_file.close()
 
     print '\nOutput file length: ' + str(out_len)
@@ -238,7 +244,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
 if __name__ == "__main__":
     # Input/output names
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-    unique_output_name = '-NEWPROB'
+    unique_output_name = '-NEWPROB_testtest'
 
     # Starting probabilities
     #  --these need to be translated into log space
@@ -295,17 +301,20 @@ if __name__ == "__main__":
         ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group)
 
         new_trans_p, new_hs_fi = calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict)
+
         print '\nHotspot fold increase'
         print '  Before: ' + str(fold_increase_per_hotspot)
         print '  After:  ' + str(new_hs_fi)
+        fold_increase_per_hotspot = new_hs_fi
+
         print 'Transition probabilities'
         print '  Before: ' + str(trans_p)
         print '  After:  ' + str(new_trans_p)
-        fold_increase_per_hotspot = new_hs_fi
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
         trans_p = new_trans_p
 
         new_emit_p = calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p)
+
         print 'Emission probabilities'
         print '  Before: ' + str(emit_p)
         print '  After:  ' + str(new_emit_p)

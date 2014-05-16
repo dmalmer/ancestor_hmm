@@ -1,5 +1,6 @@
 
 import sys
+import os.path
 
 from itertools import tee, izip
 from numpy import array, loadtxt, zeros
@@ -7,9 +8,9 @@ from math import *
 from collections import defaultdict
 
 
-#----------------
-# Helper methods
-#----------------
+#-----------------
+# Utility methods
+#-----------------
 # Return a list of pairwise elements (taken from https://docs.python.org/2/library/itertools.html#recipes)
 def pairwise(iterable):
     # s -> (s0,s1), (s1,s2), (s2, s3), ...
@@ -45,7 +46,6 @@ def unique_ancestors(ancestors, SNPs):
         yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
 
 
-
 #----------------
 # Output methods
 #----------------
@@ -71,6 +71,31 @@ def write_ancestors_to_file(ancestors, SNPs):
 
     print '\nOutput file length: ' + str(out_len)
     print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
+
+
+def write_statistics(filename_in, ancestors, SNPs, states, starting_params, final_hs_fi):
+    len_before = len(SNPs)
+    len_after = 0
+    anc_counts = defaultdict(int)
+
+    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
+        anc_counts[ancestor] += 1
+        len_after += 1
+
+    line = '%i\t%i\t%.3f\t%.2f\t%.2f\t%.2f\t%.2f\t%.1f\t%.1f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n' % \
+           (len_before, len_after, float(len_before-len_after)/len_before, starting_params[0], starting_params[1],
+            starting_params[2], starting_params[3], starting_params[4], final_hs_fi, anc_counts['A']/float(len_after),
+            anc_counts['ARK']/float(len_after), anc_counts['BALBc']/float(len_after),
+            anc_counts['C3HHe']/float(len_after), anc_counts['C57BL6N']/float(len_after),
+            anc_counts['DBA2']/float(len_after), anc_counts['Unk']/float(len_after))
+
+    filename_out = '/'.join(filename_in.split('/')[:-1]) + '/STATS_' + filename_in.split('/')[-1]
+    if not os.path.isfile(filename_out):
+        line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI_start\tHS_FI_end\t' + \
+               '%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\n' + line
+
+    with open(filename_out, 'a') as f:
+        f.write(line)
 
 
 #---------------------
@@ -253,7 +278,7 @@ if __name__ == "__main__":
     def_trans_out_p = .09
     def_emit_same_p = .95
     def_emit_other_p = .05
-    def_fold_increase_per_hotspot = 40
+    def_fold_increase_per_hotspot = 10
 
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
@@ -327,3 +352,6 @@ if __name__ == "__main__":
 
     print_ancestors(ancestors, SNPs, 'Viterbi')
     write_ancestors_to_file(ancestors, SNPs)
+
+    write_statistics(sys.argv[1], ancestors, SNPs, states, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
+                     def_emit_other_p, def_fold_increase_per_hotspot), fold_increase_per_hotspot)

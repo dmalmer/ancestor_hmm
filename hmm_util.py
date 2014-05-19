@@ -21,9 +21,8 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
 def log_add(log_A, log_B):
-    log_max = max(log_A, log_B)
-    log_min = min(log_A, log_B)
-    return log_max + log(1. + e ** (log_min - log_max))
+    # ***Note***: log_A needs to be greater than log_B, but I'm removing setting the max here to speed things up
+    return log_A + log(1. + e ** (log_B - log_A))
 
 # Return a list of pairwise elements
 #  (taken from https://docs.python.org/2/library/itertools.html#recipes)

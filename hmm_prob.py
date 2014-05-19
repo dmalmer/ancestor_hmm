@@ -33,7 +33,8 @@ def calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict):
             tot_trans = float(sum(trans_counts[s_outer].values()))
             new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
 
-    new_hs_fi = max(float(tot_hs_trans)/max(tot_hs_not_trans, 1), 1.)
+    #new_hs_fi = max(float(tot_hs_trans)/max(tot_hs_not_trans, 1), 1.)
+    new_hs_fi = 1
 
     return new_trans_p, new_hs_fi
 

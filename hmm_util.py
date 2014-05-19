@@ -1,6 +1,6 @@
 
 from itertools import tee, izip
-from math import ceil
+from math import ceil, e, log
 
 
 # Count the number of hotspots between two chromosome positions
@@ -18,7 +18,15 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
     return hs_count
 
 
-# Return a list of pairwise elements (taken from https://docs.python.org/2/library/itertools.html#recipes)
+# Find log(A+B) when A and B are in log-space
+#  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
+def log_add(log_A, log_B):
+    log_max = max(log_A, log_B)
+    log_min = min(log_A, log_B)
+    return log_max + log(1. + e ** (log_min - log_max))
+
+# Return a list of pairwise elements
+#  (taken from https://docs.python.org/2/library/itertools.html#recipes)
 def pairwise(iterable):
     # s -> (s0,s1), (s1,s2), (s2, s3), ...
     a, b = tee(iterable)

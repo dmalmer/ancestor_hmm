@@ -38,7 +38,7 @@ def write_statistics(filename_in, ancestors, SNPs, states, starting_params, fina
         anc_counts[ancestor] += 1
         len_after += 1
 
-    line = '%i\t%i\t%.3f\t%.2f\t%.2f\t%.2f\t%.2f\t%.1f\t%.1f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n' % \
+    line = '%i\t%i\t%.3f\t%.5f\t%.5f\t%.2f\t%.2f\t%.1f\t%.1f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\n' % \
            (len_before, len_after, float(len_before-len_after)/len_before, starting_params[0], starting_params[1],
             starting_params[2], starting_params[3], starting_params[4], final_hs_fi, anc_counts['A']/float(len_after),
             anc_counts['ARK']/float(len_after), anc_counts['BALBc']/float(len_after),

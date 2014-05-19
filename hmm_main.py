@@ -15,24 +15,24 @@ from hmm_util import count_hotspots, log_add
 #-------------------
 def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group,
             use_hotspots, use_SNP_dist):
-    # initialize
+    # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
 
     # SNPs[0] probabilities
     for s in states:
-        # for each state, the emission probability is either emit_p[state] or emit_p[~state]
+        # For each state, the emission probability is either emit_p[state] or emit_p[~state]
         emit_key = s
         if s == 'Unk':
             if SNPs[0][3] != input_group:
                 emit_key = '~' + s
         elif s not in SNPs[0][3].split('_'):
             emit_key = '~' + s
-        # probability of a given state at SNPs[0] is the (start prob of state) * (emit prob of state)
+        # Probability of a given state at SNPs[0] is the (start prob of state) * (emit prob of state)
         prob_nodes[0][s] = start_p[s] + emit_p[s][emit_key]
         ancestors_by_state[s] = [s]
 
-    # rest of SNP probabilities
+    # Rest of SNP probabilities
     for i in range(1, len(SNPs)):
         if i % 1000 == 0:
             print 'i = ' + str(i)
@@ -41,9 +41,9 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
         hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
         SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
-        # at every SNP, find probabilities for each state
+        # At every SNP, find probabilities for each state
         for curr_state in states:
-            # for each state, the emission probability is either emit_p[state] or emit_p[~state]
+            # For each state, the emission probability is either emit_p[state] or emit_p[~state]
             emit_key = curr_state
             if curr_state == 'Unk':
                 if SNPs[i][3] != input_group:
@@ -58,12 +58,13 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
                 # If set, incorporate recombination hotspot data and SNP distance
                 hotspot_fi = 1
                 if prev_state == curr_state:
-                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist if use_SNP_dist else trans_p[prev_state][curr_state]
+                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist if \
+                        use_SNP_dist else trans_p[prev_state][curr_state]
                 else:
                     if use_SNP_dist:
                         curr_trans_p = 0.
                         for j in range(1,SNP_dist):
-                            # Hopefully I can eventually remove this check to speed things up
+                            # hopefully I can eventually remove this check to speed things up (should always be true)
                             if curr_trans_p < trans_p[prev_state][prev_state]*j:
                                 raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
                             curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
@@ -71,8 +72,8 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
                     else:
                         curr_trans_p = trans_p[prev_state][curr_state]
 
+                    # Only apply hotspot fold increase to transition probabilities from one state to a different state
                     if use_hotspots:
-                        # only apply hotspot fold increase to transition probabilities from one state to a different state
                         hotspot_fi = max(fold_increase_per_hotspot * hotspots_count, 1)
 
                 # Calculate probabilities
@@ -81,14 +82,14 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
 
             (prob, prev_state) = max(state_probabilities)
 
-            # keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
+            # Keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
             prob_nodes[i][curr_state] = prob
             new_ancestors_by_state[curr_state] = ancestors_by_state[prev_state] + [curr_state]
 
-        # update ancestors with additional iteration
+        # Update ancestors with additional iteration
         ancestors_by_state = new_ancestors_by_state
 
-    # find maximum-likelihood ancestors
+    # Find maximum-likelihood ancestors
     (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
 
     return ancestors_by_state[best_state]
@@ -99,11 +100,12 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
 #-------------
 if __name__ == "__main__":
     # Input/output names
-    input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-    unique_output_name = '-NEWPROB_testtest'
+    input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if \
+        sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
+    unique_output_name = ''
 
-    # Starting probabilities
-    #  --these need to be translated into log space
+    # Starting settings
+    #  --The probabilities need to be translated into log space
     def_start_p = 1/.7
     def_trans_in_p = .9999
     def_trans_out_p = (1 - def_trans_in_p) / 6
@@ -119,7 +121,7 @@ if __name__ == "__main__":
 
     # Read in hotspot data
     #  defaultdict list that begins with a 0 element rather than starting empty
-    #  all even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
+    #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
     hotspot_dict = defaultdict(lambda: [0])
     with open('data/mouse_hotspots.csv', 'r') as f:
         f.readline()
@@ -128,7 +130,7 @@ if __name__ == "__main__":
             splits = line.split(',')
             hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
             line = f.readline()
-    #  convert to numpy arrays
+    #  Convert to numpy arrays
     for k, v in hotspot_dict.items():
         hotspot_dict[k] = array(v)
 
@@ -183,7 +185,8 @@ if __name__ == "__main__":
     print_ancestors(ancestors, SNPs, 'Viterbi')
     write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
 
-    write_statistics(sys.argv[1], ancestors, SNPs, states, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
-                     def_emit_other_p, def_fold_increase_per_hotspot), fold_increase_per_hotspot)
+    write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
+                     def_emit_other_p, def_fold_increase_per_hotspot, use_hotspots, use_SNP_dist), run_count,
+                     fold_increase_per_hotspot)
 
     print trans_p

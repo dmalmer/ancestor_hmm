@@ -64,6 +64,9 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
                     if use_SNP_dist:
                         curr_trans_p = 0.
                         for j in range(1,SNP_dist):
+                            # hopefully I can eventually remove this check to speed things up (should always be true)
+                            if curr_trans_p < trans_p[prev_state][prev_state]*j:
+                                raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
                             curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
                         curr_trans_p += trans_p[prev_state][curr_state]
                     else:

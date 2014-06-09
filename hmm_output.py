@@ -48,8 +48,8 @@ def write_statistics(filename_in, ancestors, SNPs, starting_params, run_count, f
 
     filename_out = '/'.join(filename_in.split('/')[:-1]) + '/STATS_' + filename_in.split('/')[-1]
     if not isfile(filename_out):
-        line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI_start\tHS_FI_end\t' + \
-               'Use_HS\tUse_SNP_dist\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\tRun_count\n' + line
+        line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI\tUse_HS\tUse_SNP_dist\t + \
+        %_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\tRun_count\n' + line
 
     with open(filename_out, 'a') as f:
         f.write(line)

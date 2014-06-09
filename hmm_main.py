@@ -6,7 +6,7 @@ from math import log
 from numpy import array, loadtxt, zeros
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
-from hmm_prob import calc_new_emit_p, calc_new_trans_p_and_hs_fi, prob_dist
+from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
 from hmm_util import count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
 
@@ -111,7 +111,8 @@ if __name__ == "__main__":
     def_trans_out_p = (1 - def_trans_in_p) / 6
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
-    def_fold_increase_per_hotspot = 1
+
+    fold_increase_per_hotspot = 40
     use_hotspots = True
     use_SNP_dist = True
 
@@ -136,9 +137,6 @@ if __name__ == "__main__":
     trans_p = {s_outer: {s_inner: log(def_trans_in_p) if s_inner == s_outer else log(def_trans_out_p) for s_inner in states} for s_outer in states}
     emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}
 
-    # Hotspot fold increase
-    fold_increase_per_hotspot = def_fold_increase_per_hotspot
-
     # Run algorithms
     tot_prob_dist = 10.
     run_count = 0
@@ -148,12 +146,7 @@ if __name__ == "__main__":
         ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict,
                             input_group, use_hotspots, use_SNP_dist)
 
-        new_trans_p, new_hs_fi = calc_new_trans_p_and_hs_fi(ancestors, SNPs, states, hotspot_dict)
-
-        print '\nHotspot fold increase'
-        print '  Before: ' + str(fold_increase_per_hotspot)
-        print '  After:  ' + str(new_hs_fi)
-        fold_increase_per_hotspot = new_hs_fi
+        new_trans_p = calc_new_trans_p(ancestors, states)
 
         print 'Transition probabilities'
         print '  Before: ' + str(trans_p)
@@ -177,7 +170,7 @@ if __name__ == "__main__":
     write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
 
     write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
-                     def_emit_other_p, def_fold_increase_per_hotspot, use_hotspots, use_SNP_dist), run_count,
+                     def_emit_other_p, fold_increase_per_hotspot, use_hotspots, use_SNP_dist), run_count,
                      fold_increase_per_hotspot)
 
     print trans_p

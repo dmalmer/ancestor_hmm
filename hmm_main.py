@@ -7,7 +7,7 @@ from numpy import array, loadtxt, zeros
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p_and_hs_fi, prob_dist
-from hmm_util import count_hotspots, log_add, read_hotspot
+from hmm_util import count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
 
 #-------------------
@@ -120,7 +120,10 @@ if __name__ == "__main__":
     print 'Input file length: ' + str(len(SNPs))
 
     # Read in hotspot data
-    hotspot_dict = read_hotspot('data/mouse_hotspots.csv')
+    hotspot_dict = read_hotspots_data('data/mouse_hotspots.csv')
+
+    # Read in recombination rate data
+    recomb_rate_dict = read_recomb_rates_data('data/mouse_recomb_rates.csv')
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')

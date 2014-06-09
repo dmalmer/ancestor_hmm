@@ -49,7 +49,7 @@ def unique_ancestors(ancestors, SNPs):
 
 
 # Read in data and add to dictionary with chromosome keys
-def read_hotspot(filename):
+def read_hotspots_data(filename):
     #  defaultdict list that begins with a 0 element rather than starting empty
     #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
     hotspot_dict = defaultdict(lambda: [0])
@@ -65,3 +65,22 @@ def read_hotspot(filename):
         hotspot_dict[k] = array(v)
 
     return hotspot_dict
+
+
+def read_recomb_rates_data(filename):
+    recomb_rate_dict = defaultdict(list)
+    with open(filename, 'r') as f:
+        f.readline()
+        line = f.readline()
+        while line != '':
+            splits = line.split(',')
+            recomb_rate_dict[splits[0]].append([int(float(splits[1])*1000), float(splits[2])])
+            line = f.readline()
+
+    #  Convert to numpy arrays
+    for k, v in recomb_rate_dict.items():
+        recomb_rate_dict[k] = array(v)
+
+    return recomb_rate_dict
+
+

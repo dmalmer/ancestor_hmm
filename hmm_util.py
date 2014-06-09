@@ -1,6 +1,8 @@
 
+from collections import defaultdict
 from itertools import tee, izip
 from math import ceil, e, log
+from numpy import array
 
 
 # Count the number of hotspots between two chromosome positions
@@ -24,6 +26,7 @@ def log_add(log_A, log_B):
     # ***Note***: log_A needs to be greater than log_B, but I'm removing setting the max here to speed things up
     return log_A + log(1. + e ** (log_B - log_A))
 
+
 # Return a list of pairwise elements
 #  (taken from https://docs.python.org/2/library/itertools.html#recipes)
 def pairwise(iterable):
@@ -43,3 +46,22 @@ def unique_ancestors(ancestors, SNPs):
             curr_i += 1
 
         yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
+
+
+# Read in data and add to dictionary with chromosome keys
+def read_hotspot(filename):
+    #  defaultdict list that begins with a 0 element rather than starting empty
+    #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
+    hotspot_dict = defaultdict(lambda: [0])
+    with open(filename, 'r') as f:
+        f.readline()
+        line = f.readline()
+        while line != '':
+            splits = line.split(',')
+            hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
+            line = f.readline()
+    #  Convert to numpy arrays
+    for k, v in hotspot_dict.items():
+        hotspot_dict[k] = array(v)
+
+    return hotspot_dict

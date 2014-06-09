@@ -7,7 +7,7 @@ from numpy import array, loadtxt, zeros
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p_and_hs_fi, prob_dist
-from hmm_util import count_hotspots, log_add
+from hmm_util import count_hotspots, log_add, read_hotspot
 
 
 #-------------------
@@ -120,19 +120,7 @@ if __name__ == "__main__":
     print 'Input file length: ' + str(len(SNPs))
 
     # Read in hotspot data
-    #  defaultdict list that begins with a 0 element rather than starting empty
-    #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
-    hotspot_dict = defaultdict(lambda: [0])
-    with open('data/mouse_hotspots.csv', 'r') as f:
-        f.readline()
-        line = f.readline()
-        while line != '':
-            splits = line.split(',')
-            hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
-            line = f.readline()
-    #  Convert to numpy arrays
-    for k, v in hotspot_dict.items():
-        hotspot_dict[k] = array(v)
+    hotspot_dict = read_hotspot('data/mouse_hotspots.csv')
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')

@@ -54,7 +54,7 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map):
                       recomb_map[recomb_start_i][0]) * recomb_map[recomb_start_i][1]
 
         # Rates in the middle
-        for i in range(recomb_start_i+1, recomb_end_i):
+        for i in range(recomb_start_i+1, recomb_end_i-1):
             recomb_rate += recomb_map[i][1]
 
         # Proportional rate of second SNP

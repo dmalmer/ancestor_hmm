@@ -5,6 +5,18 @@ from math import ceil, e, log
 from numpy import array
 
 
+# Generator to loop over only unique ancestors
+def ancestor_blocks(ancestors, SNPs):
+    curr_i = 0
+    while curr_i < len(ancestors):
+        start_i = curr_i
+        curr_i += 1
+        while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
+            curr_i += 1
+
+        yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
+
+
 # Count the number of hotspots between two chromosome positions
 def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
     # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
@@ -36,19 +48,7 @@ def pairwise(iterable):
     return izip(a, b)
 
 
-# Generator to loop over only unique ancestors
-def unique_ancestors(ancestors, SNPs):
-    curr_i = 0
-    while curr_i < len(ancestors):
-        start_i = curr_i
-        curr_i += 1
-        while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
-            curr_i += 1
-
-        yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
-
-
-# Read in data and add to dictionary with chromosome keys
+# Read in hotspot data
 def read_hotspots_data(filename):
     #  defaultdict list that begins with a 0 element rather than starting empty
     #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
@@ -67,6 +67,7 @@ def read_hotspots_data(filename):
     return hotspot_dict
 
 
+# Read in recombination rates data
 def read_recomb_rates_data(filename):
     recomb_rate_dict = defaultdict(list)
     with open(filename, 'r') as f:

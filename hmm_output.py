@@ -2,7 +2,7 @@
 from collections import defaultdict
 from os.path import isfile
 
-from hmm_util import unique_ancestors
+from hmm_util import ancestor_blocks
 
 
 def print_ancestors(ancestors, SNPs, title):
@@ -20,7 +20,7 @@ def write_ancestors_to_file(filename_in, unique_output_name, ancestors, SNPs):
     out_file = open(filename_in.split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
 
     out_len = 0
-    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
+    for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
         out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\n')
         out_len += 1
     out_file.close()
@@ -34,7 +34,7 @@ def write_statistics(filename_in, ancestors, SNPs, starting_params, run_count, f
     len_after = 0
     anc_counts = defaultdict(int)
 
-    for chromosome, pos_start, pos_end, ancestor in unique_ancestors(ancestors, SNPs):
+    for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
         anc_counts[ancestor] += 1
         len_after += 1
 

@@ -7,17 +7,18 @@ from numpy import array, loadtxt, zeros
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
-from hmm_util import count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
+from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
 
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, input_group,
-            use_hotspots, use_SNP_dist):
+def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, recomb_rate_dict,
+            input_group, use_hotspots, use_SNP_dist):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
+    recomb_index = None # Initially set to None so calc_recomb_rate uses a special case when called for the first time
 
     # SNPs[0] probabilities
     for s in states:
@@ -40,6 +41,9 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
 
         hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
         SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
+
+        recomb_rate, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
+                                                     recomb_rate_dict[SNPs[i][0]])
 
         # At every SNP, find probabilities for each state
         for curr_state in states:
@@ -144,7 +148,7 @@ if __name__ == "__main__":
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % run_count
         ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict,
-                            input_group, use_hotspots, use_SNP_dist)
+                            recomb_rate_dict, input_group, use_hotspots, use_SNP_dist)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
 

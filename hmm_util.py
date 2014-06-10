@@ -17,6 +17,60 @@ def ancestor_blocks(ancestors, SNPs):
         yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
 
 
+def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map):
+    print SNP_start
+    print SNP_end
+    print recomb_map[recomb_main_i][0]
+
+    print 'recomb index start: ' + str(recomb_main_i)
+    # Find recomb_map starting position
+    if recomb_main_i is None:
+        recomb_main_i = 0
+        while recomb_main_i < len(recomb_map) and int(recomb_map[recomb_main_i][0]) < SNP_start:
+            recomb_main_i += 1
+        recomb_start_i = max(recomb_main_i-1, 0)
+    else:
+        recomb_start_i = recomb_main_i - 1
+
+    # Quick check to make sure recomb_start_i >= 0 (should be as recomb_index should always be >=1 in else statement)
+    #  remove this later
+    if recomb_start_i < 0:
+        raise Exception('recomb_start_i should never be less than 0')
+
+    # Find recomb_map ending position
+    while recomb_main_i < len(recomb_map) and int(recomb_map[recomb_main_i][0]) < SNP_end:
+        recomb_main_i += 1
+    recomb_end_i = recomb_main_i
+
+    # Calc recomb rates
+    #  First, special case for SNPs between adjacent genetic markers
+    if recomb_end_i - recomb_start_i == 1:
+        recomb_rate = (SNP_end - SNP_start) / (recomb_map[recomb_end_i][0] - recomb_map[recomb_start_i][0]) * \
+                      recomb_map[recomb_start_i][1]
+    #  Otherwise, calc with all recomb rates between SNPs
+    else:
+        # Proportional rate of first SNP
+        recomb_rate = (recomb_map[recomb_start_i+1][0] - SNP_start) / (recomb_map[recomb_start_i+1][0] - \
+                      recomb_map[recomb_start_i][0]) * recomb_map[recomb_start_i][1]
+
+        # Rates in the middle
+        for i in range(recomb_start_i+1, recomb_end_i):
+            recomb_rate += recomb_map[i][1]
+
+        # Proportional rate of second SNP
+        recomb_rate += (SNP_end - recomb_map[recomb_end_i-1][0]) / (recomb_map[recomb_end_i][0] - \
+                       recomb_map[recomb_end_i-1][0]) * recomb_map[recomb_end_i-1][1]
+
+    print 'recomb_start_i = ' + str(recomb_start_i)
+    print 'recomb_end_i = ' + str(recomb_end_i)
+    print 'recomb_rate = ' + str(recomb_rate)
+
+
+    print '\n'
+
+    return recomb_rate, recomb_main_i
+
+
 # Count the number of hotspots between two chromosome positions
 def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
     # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
@@ -74,13 +128,13 @@ def read_recomb_rates_data(filename):
         f.readline()
         line = f.readline()
         while line != '':
-            splits = line.split(',')
-            recomb_rate_dict[splits[0]].append([int(float(splits[1])*1000), float(splits[2])])
+            splits = line.strip().split(',')
+            recomb_rate_dict[splits[0]].append([float(splits[1])*1000, float(splits[2])])
             line = f.readline()
 
     #  Convert to numpy arrays
     for k, v in recomb_rate_dict.items():
-        recomb_rate_dict[k] = array(v)
+        recomb_rate_dict[k] = array(v, dtype=float)
 
     return recomb_rate_dict
 

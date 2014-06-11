@@ -13,8 +13,8 @@ from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_da
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict, recomb_rate_dict,
-            input_group, use_hotspots, use_SNP_dist):
+def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict, input_group,
+            use_hotspots, use_SNP_dist, use_recomb_rates):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -39,12 +39,19 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
             print 'i = ' + str(i)
         new_ancestors_by_state = {}
 
-        hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
-        SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
+        # Use of additional data flags
+        hotspots_count = 0
+        if use_hotspots:
+            hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
 
-        recomb_rate, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
-                                                     recomb_rate_dict[SNPs[i][0]])
+        SNP_dist = 1
+        if use_SNP_dist:
+            SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
+        recomb_rate = 1.
+        if use_recomb_rates:
+            recomb_rate, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
+                                                       recomb_rate_dict[SNPs[i][0]])
         # At every SNP, find probabilities for each state
         for curr_state in states:
             # For each state, the emission probability is either emit_p[state] or emit_p[~state]
@@ -59,29 +66,23 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, h
             #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
             state_probabilities = []
             for prev_state in states:
-                # If set, incorporate recombination hotspot data and SNP distance
-                hotspot_fi = 1
+                curr_hotspot_fi = 1
                 if prev_state == curr_state:
-                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist if \
-                        use_SNP_dist else trans_p[prev_state][curr_state]
+                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
                 else:
-                    if use_SNP_dist:
-                        curr_trans_p = 0.
-                        for j in range(1,SNP_dist):
-                            # hopefully I can eventually remove this check to speed things up (should always be true)
-                            if curr_trans_p < trans_p[prev_state][prev_state]*j:
-                                raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
-                            curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
-                        curr_trans_p += trans_p[prev_state][curr_state]
-                    else:
-                        curr_trans_p = trans_p[prev_state][curr_state]
+                    curr_trans_p = 0.
+                    for j in range(1,SNP_dist):
+                        # hopefully I can eventually remove this check to speed things up (should always be true)
+                        if curr_trans_p < trans_p[prev_state][prev_state]*j:
+                            raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
+                        curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
+                    curr_trans_p += trans_p[prev_state][curr_state]
 
                     # Only apply hotspot fold increase to transition probabilities from one state to a different state
-                    if use_hotspots:
-                        hotspot_fi = max(fold_increase_per_hotspot * hotspots_count, 1)
+                    curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
 
                 # Calculate probabilities
-                state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(hotspot_fi) +
+                state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(curr_hotspot_fi) +
                                             emit_p[curr_state][emit_key], prev_state))
 
             (prob, prev_state) = max(state_probabilities)
@@ -116,9 +117,10 @@ if __name__ == "__main__":
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
 
-    fold_increase_per_hotspot = 40
-    use_hotspots = True
-    use_SNP_dist = True
+    fi_per_hotspot = 40 #fold increase per hotspot
+    use_hotspots = False
+    use_SNP_dist = False
+    use_recomb_rates = True
 
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
@@ -128,7 +130,9 @@ if __name__ == "__main__":
     hotspot_dict = read_hotspots_data('data/mouse_hotspots.csv')
 
     # Read in recombination rate data
-    recomb_rate_dict = read_recomb_rates_data('data/mouse_recomb_rates.csv')
+    recomb_rate_dict = {}
+    if use_recomb_rates:
+        recomb_rate_dict = read_recomb_rates_data('data/mouse_recomb_rates.csv')
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
@@ -147,8 +151,8 @@ if __name__ == "__main__":
     while tot_prob_dist > 0.01 and run_count < 1:
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % run_count
-        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fold_increase_per_hotspot, hotspot_dict,
-                            recomb_rate_dict, input_group, use_hotspots, use_SNP_dist)
+        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict,
+                            recomb_rate_dict, input_group, use_hotspots, use_SNP_dist, use_recomb_rates)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
 
@@ -174,7 +178,5 @@ if __name__ == "__main__":
     write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
 
     write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
-                     def_emit_other_p, fold_increase_per_hotspot, use_hotspots, use_SNP_dist), run_count,
-                     fold_increase_per_hotspot)
-
-    print trans_p
+                     def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
+                     run_count)

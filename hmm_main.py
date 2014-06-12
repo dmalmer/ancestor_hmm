@@ -3,7 +3,8 @@ import sys
 
 from collections import defaultdict
 from math import log
-from numpy import array, loadtxt, zeros
+from numpy import loadtxt, zeros
+from time import time
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
@@ -104,6 +105,9 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
 # Main method
 #-------------
 if __name__ == "__main__":
+    #Start timer
+    time_start = time()
+
     # Input/output names
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if \
         sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
@@ -179,4 +183,4 @@ if __name__ == "__main__":
 
     write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
                      def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
-                     run_count)
+                     run_count, time() - time_start)

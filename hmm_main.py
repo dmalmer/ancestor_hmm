@@ -14,8 +14,8 @@ from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_da
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict, input_group,
-            use_hotspots, use_SNP_dist, use_recomb_rates):
+def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict, effective_pop,
+            num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -49,10 +49,12 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
         if use_SNP_dist:
             SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
-        recomb_rate = 1.
+        expected_recombs = 0.
         if use_recomb_rates:
-            recomb_rate, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
-                                                       recomb_rate_dict[SNPs[i][0]])
+            expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
+                                                              recomb_rate_dict[SNPs[i][0]], effective_pop,
+                                                              num_generations)
+
         # At every SNP, find probabilities for each state
         for curr_state in states:
             # For each state, the emission probability is either emit_p[state] or emit_p[~state]
@@ -121,7 +123,9 @@ if __name__ == "__main__":
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
 
-    fi_per_hotspot = 40 #fold increase per hotspot
+    fi_per_hotspot = 40 # fold increase per hotspot
+    effective_pop = 1 # effective population (N_e) for recombination rate calculations
+    num_generations = 25 # number of generations between ancestors and ILS/ISS strains
     use_hotspots = False
     use_SNP_dist = False
     use_recomb_rates = True
@@ -155,8 +159,8 @@ if __name__ == "__main__":
     while tot_prob_dist > 0.01 and run_count < 1:
         tot_prob_dist = 0.
         print '\n---- RUN %i ----' % run_count
-        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict,
-                            recomb_rate_dict, input_group, use_hotspots, use_SNP_dist, use_recomb_rates)
+        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
+                            effective_pop, num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
 

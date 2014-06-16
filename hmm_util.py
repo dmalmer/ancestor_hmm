@@ -17,12 +17,7 @@ def ancestor_blocks(ancestors, SNPs):
         yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
 
 
-def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map):
-    print SNP_start
-    print SNP_end
-    print recomb_map[recomb_main_i][0]
-
-    print 'recomb index start: ' + str(recomb_main_i)
+def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_pop, num_generations):
     # Find recomb_map starting position
     if recomb_main_i is None:
         recomb_main_i = 0
@@ -45,30 +40,25 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map):
     # Calc recomb rates
     #  First, special case for SNPs between adjacent genetic markers
     if recomb_end_i - recomb_start_i == 1:
-        recomb_rate = (SNP_end - SNP_start) / (recomb_map[recomb_end_i][0] - recomb_map[recomb_start_i][0]) * \
-                      recomb_map[recomb_start_i][1]
+        expected_recombs = ((((SNP_end - SNP_start) / 1000.) * recomb_map[recomb_start_i][1]) / (4 * effective_pop)) * \
+                           num_generations
+
     #  Otherwise, calc with all recomb rates between SNPs
     else:
         # Proportional rate of first SNP
-        recomb_rate = (recomb_map[recomb_start_i+1][0] - SNP_start) / (recomb_map[recomb_start_i+1][0] - \
-                      recomb_map[recomb_start_i][0]) * recomb_map[recomb_start_i][1]
+        expected_recombs = ((((recomb_map[recomb_start_i+1][0] - SNP_start) / 1000.) * recomb_map[recomb_start_i][1]) / \
+                            (4 * effective_pop)) * num_generations
 
         # Rates in the middle
         for i in range(recomb_start_i+1, recomb_end_i-1):
-            recomb_rate += recomb_map[i][1]
+            expected_recombs += ((((recomb_map[i+1][0] - recomb_map[i][0]) / 1000.) * recomb_map[i][1]) / \
+                                 (4 * effective_pop)) * num_generations
 
         # Proportional rate of second SNP
-        recomb_rate += (SNP_end - recomb_map[recomb_end_i-1][0]) / (recomb_map[recomb_end_i][0] - \
-                       recomb_map[recomb_end_i-1][0]) * recomb_map[recomb_end_i-1][1]
+        expected_recombs += ((((SNP_end - recomb_map[recomb_end_i-1][0]) / 1000.) * recomb_map[recomb_end_i-1][1]) / \
+                             (4 * effective_pop)) * num_generations
 
-    print 'recomb_start_i = ' + str(recomb_start_i)
-    print 'recomb_end_i = ' + str(recomb_end_i)
-    print 'recomb_rate = ' + str(recomb_rate)
-
-
-    print '\n'
-
-    return recomb_rate, recomb_main_i
+    return expected_recombs, recomb_main_i
 
 
 # Count the number of hotspots between two chromosome positions

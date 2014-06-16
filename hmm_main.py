@@ -49,7 +49,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
         if use_SNP_dist:
             SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
-        expected_recombs = 0.
+        expected_recombs = 1.
         if use_recomb_rates:
             expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
                                                               recomb_rate_dict[SNPs[i][0]], effective_pop,
@@ -71,7 +71,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
             for prev_state in states:
                 curr_hotspot_fi = 1
                 if prev_state == curr_state:
-                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
+                    curr_trans_p = (trans_p[prev_state][curr_state] * SNP_dist) + log(1. / expected_recombs)
                 else:
                     curr_trans_p = 0.
                     for j in range(1,SNP_dist):
@@ -79,7 +79,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
                         if curr_trans_p < trans_p[prev_state][prev_state]*j:
                             raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
                         curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
-                    curr_trans_p += trans_p[prev_state][curr_state]
+                    curr_trans_p += trans_p[prev_state][curr_state] + log(expected_recombs)
 
                     # Only apply hotspot fold increase to transition probabilities from one state to a different state
                     curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
@@ -118,7 +118,7 @@ if __name__ == "__main__":
     # Starting settings
     #  --The probabilities need to be translated into log space
     def_start_p = 1/.7
-    def_trans_in_p = .9999
+    def_trans_in_p = .94
     def_trans_out_p = (1 - def_trans_in_p) / 6
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p

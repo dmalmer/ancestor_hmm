@@ -1,15 +1,18 @@
 
 import sys
 
-from collections import defaultdict
 from math import log
 from numpy import loadtxt, zeros
+from os import environ
 from time import time
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
 from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
+WORKING_DIR = ''
+if environ['HOSTNAME'][-6:] == '.local':
+    WORKING_DIR = '/Users/dama9282/AncestorInference/'
 
 #-------------------
 # Viterbi algorithm
@@ -107,7 +110,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
 # Main method
 #-------------
 if __name__ == "__main__":
-    #Start timer
+    # Start timer
     time_start = time()
 
     # Input/output names
@@ -116,16 +119,16 @@ if __name__ == "__main__":
     unique_output_name = ''
 
     # Starting settings
-    #  --The probabilities need to be translated into log space
+    #  The probabilities are translated into log space later on
     def_start_p = 1/.7
     def_trans_in_p = .94
     def_trans_out_p = (1 - def_trans_in_p) / 6
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
 
-    fi_per_hotspot = 40 # fold increase per hotspot
-    effective_pop = 1 # effective population (N_e) for recombination rate calculations
-    num_generations = 25 # number of generations between ancestors and ILS/ISS strains
+    fi_per_hotspot = 40  # fold increase per hotspot
+    effective_pop = 1  # effective population (N_e) for recombination rate calculations
+    num_generations = 25  # number of generations between ancestors and ILS/ISS strains
     use_hotspots = False
     use_SNP_dist = False
     use_recomb_rates = True
@@ -135,20 +138,17 @@ if __name__ == "__main__":
     print 'Input file length: ' + str(len(SNPs))
 
     # Read in hotspot data
-    hotspot_dict = read_hotspots_data('data/mouse_hotspots.csv')
+    hotspot_dict = read_hotspots_data(WORKING_DIR + 'data/mouse_hotspots.csv')
 
     # Read in recombination rate data
     recomb_rate_dict = {}
     if use_recomb_rates:
-        recomb_rate_dict = read_recomb_rates_data('data/mouse_recomb_rates.csv')
+        recomb_rate_dict = read_recomb_rates_data(WORKING_DIR + 'data/mouse_recomb_rates.csv')
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
 
     # Start, transition, and emission probabilities
-    #  Equal start probability for each state
-    #  Transition to same state = 0.46, to other state = 0.09
-    #  Emit same state = 0.95, other state = 0.05 (labeled '~State')
     start_p = {s: log(def_start_p) for s in states}
     trans_p = {s_outer: {s_inner: log(def_trans_in_p) if s_inner == s_outer else log(def_trans_out_p) for s_inner in states} for s_outer in states}
     emit_p = {s: {s: log(def_emit_same_p), '~'+s: log(def_emit_other_p)} for s in states}

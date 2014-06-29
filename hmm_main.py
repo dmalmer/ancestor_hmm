@@ -56,7 +56,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
             SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
         expected_recombs = 1.
-        if use_recomb_rates:
+        if use_recomb_rates and len(recomb_rate_dict[SNPs[i][0]]) > 0:
             expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
                                                               recomb_rate_dict[SNPs[i][0]], effective_pop,
                                                               num_generations)

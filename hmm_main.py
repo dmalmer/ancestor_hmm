@@ -11,14 +11,17 @@ from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
 from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
 WORKING_DIR = ''
-if environ['HOSTNAME'][-6:] == '.local':
-    WORKING_DIR = '/Users/dama9282/AncestorInference/'
+try:
+    if environ['HOSTNAME'][-6:] == '.local':
+        WORKING_DIR = '/Users/dama9282/AncestorInference/'
+except KeyError:
+    pass
 
 #-------------------
 # Viterbi algorithm
 #-------------------
 def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict, effective_pop,
-            num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates):
+            num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates, verbose):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -39,7 +42,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
 
     # Rest of SNP probabilities
     for i in range(1, len(SNPs)):
-        if i % 1000 == 0:
+        if verbose and i % 1000 == 0:
             print 'i = ' + str(i)
         new_ancestors_by_state = {}
 
@@ -133,6 +136,9 @@ if __name__ == "__main__":
     use_SNP_dist = False
     use_recomb_rates = True
 
+    verbose = False
+    max_run_count = 50
+
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
     print 'Input file length: ' + str(len(SNPs))
@@ -156,35 +162,44 @@ if __name__ == "__main__":
     # Run algorithms
     tot_prob_dist = 10.
     run_count = 0
-    while tot_prob_dist > 0.01 and run_count < 1:
+    while tot_prob_dist > 0.01 and run_count < max_run_count:
         tot_prob_dist = 0.
-        print '\n---- RUN %i ----' % run_count
+        if verbose:
+            print '\n---- RUN %i ----' % run_count
         ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
-                            effective_pop, num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates)
+                            effective_pop, num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates,
+                            verbose)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
 
-        print 'Transition probabilities'
-        print '  Before: ' + str(trans_p)
-        print '  After:  ' + str(new_trans_p)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
         trans_p = new_trans_p
 
         new_emit_p = calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p)
 
-        print 'Emission probabilities'
-        print '  Before: ' + str(emit_p)
-        print '  After:  ' + str(new_emit_p)
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
         emit_p = new_emit_p
 
-        print 'Total probability distance: %.3f' % tot_prob_dist
+        if verbose:
+            print 'Transition probabilities'
+            print '  Before: ' + str(trans_p)
+            print '  After:  ' + str(new_trans_p)
+
+            print 'Emission probabilities'
+            print '  Before: ' + str(emit_p)
+            print '  After:  ' + str(new_emit_p)
+
+            print 'Total probability distance: %.3f' % tot_prob_dist
 
         run_count += 1
 
-    print_ancestors(ancestors, SNPs, 'Viterbi')
-    write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
+    print 'Total time (min): ' + str((time() - time_start)/60)
+    print 'Total runs: ' + str(run_count)
 
+    if verbose:
+        print_ancestors(ancestors, SNPs, 'Viterbi')
+
+    write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
     write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
                      def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
                      run_count, time() - time_start)

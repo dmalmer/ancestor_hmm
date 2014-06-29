@@ -33,7 +33,7 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_po
         raise Exception('recomb_start_i should never be less than 0')
 
     # Find recomb_map ending position
-    while recomb_main_i < len(recomb_map) and int(recomb_map[recomb_main_i][0]) < SNP_end:
+    while (recomb_main_i < len(recomb_map) and int(recomb_map[recomb_main_i][0]) < SNP_end) or recomb_main_i == 0:
         recomb_main_i += 1
     recomb_end_i = recomb_main_i
 
@@ -94,8 +94,8 @@ def pairwise(iterable):
 
 # Read in hotspot data
 def read_hotspots_data(filename):
-    #  defaultdict list that begins with a 0 element rather than starting empty
-    #  All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
+    # defaultdict list that begins with a 0 element rather than starting empty
+    # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
     hotspot_dict = defaultdict(lambda: [0])
     with open(filename, 'r') as f:
         f.readline()
@@ -104,7 +104,7 @@ def read_hotspots_data(filename):
             splits = line.split(',')
             hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
             line = f.readline()
-    #  Convert to numpy arrays
+    # Convert to numpy arrays
     for k, v in hotspot_dict.items():
         hotspot_dict[k] = array(v)
 
@@ -122,7 +122,7 @@ def read_recomb_rates_data(filename):
             recomb_rate_dict[splits[0]].append([float(splits[1])*1000, float(splits[2])])
             line = f.readline()
 
-    #  Convert to numpy arrays
+    # Convert to numpy arrays
     for k, v in recomb_rate_dict.items():
         recomb_rate_dict[k] = array(v, dtype=float)
 

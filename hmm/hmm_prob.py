@@ -4,11 +4,11 @@ from collections import defaultdict
 from itertools import izip
 from math import log
 
-from hmm_util import pairwise, count_hotspots
+from hmm_util import pairwise
 
 
 def calc_new_trans_p(ancestors, states):
-    #set minimum transition counts to 1 so we don't have any 0 probabilities
+    # set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
     for anc_prev, anc_curr in pairwise(ancestors):
             trans_counts[anc_prev][anc_curr] += 1

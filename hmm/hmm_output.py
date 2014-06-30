@@ -4,6 +4,7 @@ from os.path import isfile
 
 from hmm_util import ancestor_blocks
 
+import os
 
 def print_ancestors(ancestors, SNPs, title):
     print ''
@@ -15,9 +16,9 @@ def print_ancestors(ancestors, SNPs, title):
             cur = ancestors[i]
 
 
-def write_ancestors_to_file(filename_in, unique_output_name, ancestors, SNPs):
-    extension = filename_in.rsplit('.', 1)[1]
-    out_file = open(filename_in.split('.' + extension)[0] + '_hmm-out' + unique_output_name + '.' + extension, 'w')
+def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs):
+    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
+                    '.' + filename_in.rsplit('.', 1)[1], 'w')
 
     out_len = 0
     for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
@@ -29,7 +30,7 @@ def write_ancestors_to_file(filename_in, unique_output_name, ancestors, SNPs):
     print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
 
 
-def write_statistics(filename_in, ancestors, SNPs, starting_params, run_count, tot_run_time):
+def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, starting_params, run_count, tot_run_time):
     len_before = len(SNPs)
     len_after = 0
     anc_counts = defaultdict(int)
@@ -46,7 +47,8 @@ def write_statistics(filename_in, ancestors, SNPs, starting_params, run_count, t
             anc_counts['C57BL6N']/float(len_after), anc_counts['DBA2']/float(len_after),
             anc_counts['Unk']/float(len_after), run_count, tot_run_time)
 
-    filename_out = '/'.join(filename_in.split('/')[:-1]) + '/STATS_' + filename_in.split('/')[-1]
+    filename_out = WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
+                    '.' + filename_in.rsplit('.', 1)[1]
     if not isfile(filename_out):
         line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI\tUse_HS\tUse_SNP_dist\t + \
         Use_recomb_rate\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\tRun_count\tTotal_run_time(s)\n' + line

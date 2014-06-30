@@ -10,7 +10,7 @@ from hmm_output import print_ancestors, write_ancestors_to_file, write_statistic
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
 from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
-WORKING_DIR = ''
+WORKING_DIR = '../'
 try:
     if environ['HOSTNAME'][-6:] == '.local':
         WORKING_DIR = '/Users/dama9282/AncestorInference/'
@@ -164,8 +164,10 @@ if __name__ == "__main__":
     run_count = 0
     while tot_prob_dist > 0.01 and run_count < max_run_count:
         tot_prob_dist = 0.
-        if verbose:
-            print '\n---- RUN %i ----' % run_count
+
+        print '---- Run %i ----' % run_count
+        sys.stdout.flush()
+
         ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
                             effective_pop, num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates,
                             verbose)
@@ -199,7 +201,8 @@ if __name__ == "__main__":
     if verbose:
         print_ancestors(ancestors, SNPs, 'Viterbi')
 
-    write_ancestors_to_file(sys.argv[1], unique_output_name, ancestors, SNPs)
-    write_statistics(sys.argv[1], ancestors, SNPs, (def_trans_in_p, def_trans_out_p, def_emit_same_p,
-                     def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
+    filename_in = sys.argv[1].rsplit('/', 1)[1]
+    write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs)
+    write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, (def_trans_in_p, def_trans_out_p,
+                     def_emit_same_p, def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
                      run_count, time() - time_start)

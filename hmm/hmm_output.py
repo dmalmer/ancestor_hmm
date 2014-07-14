@@ -49,7 +49,7 @@ def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SN
             anc_counts['Unk']/float(len_after), run_count, tot_run_time)
 
     filename_out = WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
-                    '.' + filename_in.rsplit('.', 1)[1]
+                    '.txt'
     if not isfile(filename_out):
         line = 'Start_len\tFinal_len\t%_diff\tTrans_in\tTrans_out\tEmit_same\tEmit_other\tHS_FI\tUse_HS\tUse_SNP_dist\t + \
         Use_recomb_rate\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\tRun_count\tTotal_run_time(s)\n' + line

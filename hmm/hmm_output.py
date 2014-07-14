@@ -16,13 +16,14 @@ def print_ancestors(ancestors, SNPs, title):
             cur = ancestors[i]
 
 
-def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs):
+def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, state_RGBs):
     out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
                     '.' + filename_in.rsplit('.', 1)[1], 'w')
 
     out_len = 0
     for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
-        out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\n')
+        out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\t0\t+\t' + pos_start + '\t' +
+                        pos_end + '\t' + state_RGBs[ancestor] + '\n')
         out_len += 1
     out_file.close()
 

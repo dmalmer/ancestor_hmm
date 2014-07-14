@@ -137,7 +137,7 @@ if __name__ == "__main__":
     use_recomb_rates = True
 
     verbose = False
-    max_run_count = 50
+    max_run_count = 1
 
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
@@ -153,6 +153,8 @@ if __name__ == "__main__":
 
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
+    state_RGBs = {'Unk': '128,128,128', 'A': '0,153,0', 'ARK': '51,51,255', 'BALBc': '255,255,51',
+                  'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51'}
 
     # Start, transition, and emission probabilities
     start_p = {s: log(def_start_p) for s in states}
@@ -202,7 +204,7 @@ if __name__ == "__main__":
         print_ancestors(ancestors, SNPs, 'Viterbi')
 
     filename_in = sys.argv[1].rsplit('/', 1)[1]
-    write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs)
+    write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, state_RGBs)
     write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, (def_trans_in_p, def_trans_out_p,
                      def_emit_same_p, def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
                      run_count, time() - time_start)

@@ -23,7 +23,7 @@ if __name__ == "__main__":
     for i in range(1,20):
         cur_chr = 'chr'+str(i)
 
-        f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.txt','r')
+        f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.bed','r')
 
         lines = f_in.readlines()
         print cur_chr + ': ' + str(len(lines))
@@ -33,7 +33,7 @@ if __name__ == "__main__":
     #chrX
     cur_chr = 'chrX'
 
-    f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.txt','r')
+    f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.bed','r')
 
     lines = f_in.readlines()
     print cur_chr + ': ' + str(len(lines))
@@ -43,7 +43,7 @@ if __name__ == "__main__":
     #chrY
     cur_chr = 'chrY'
 
-    f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.txt','r')
+    f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.bed','r')
 
     lines = f_in.readlines()
     print cur_chr + ': ' + str(len(lines))

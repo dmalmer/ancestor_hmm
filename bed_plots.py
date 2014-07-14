@@ -49,7 +49,7 @@ if __name__ == "__main__":
 
     total_recomb = 0
     for cur_chr in chromosomes:
-        f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.txt','r')
+        f_in = open('results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out.bed','r')
         lines = f_in.readlines()
 
         mice_distrb_indv[cur_chr] = defaultdict(float)

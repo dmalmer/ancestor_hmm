@@ -3,4 +3,6 @@
 *.bed
 *.txt
 *.idx
+old/*
 .*
+

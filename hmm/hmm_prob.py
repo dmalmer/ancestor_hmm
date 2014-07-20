@@ -4,7 +4,7 @@ from collections import defaultdict
 from itertools import izip
 from math import log
 
-from hmm_util import pairwise
+from hmm_util import ancestor_blocks, pairwise
 
 
 def calc_new_trans_p(ancestors, states):
@@ -65,6 +65,29 @@ def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_e
             new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, .01))
 
     return new_emit_p
+
+
+def posterior_probabilities(ancestors, SNPs, prob_nodes, states, iba_cutoff):
+    identical_by_anc = []
+    confidence_interval = []
+
+    for chromosome, pos_start, pos_end, ancestor, prob_section in ancestor_blocks(ancestors, SNPs, prob_nodes=prob_nodes):
+        print ancestor
+        print prob_section
+
+        sum_probs = 0.
+        cur_iba = []
+        for s in states:
+            if s != ancestor:
+                if sum(prob_section[ancestor])/sum(prob_section[s]) > iba_cutoff:
+                    cur_iba.append(s)
+            sum_probs += sum(prob_section[s])
+
+        if any(cur_iba):
+            identical_by_anc.append(chromosome, pos_start, pos_end, '_'.join(cur_iba))
+        confidence_interval.append((chromosome, pos_start, pos_end, 1./sum(prob_section[ancestor])/sum_probs))
+
+    return (identical_by_anc, confidence_interval)
 
 
 def prob_dist(old_probs, new_probs):

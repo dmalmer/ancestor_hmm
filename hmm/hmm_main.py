@@ -7,7 +7,7 @@ from os import environ
 from time import time
 
 from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
-from hmm_prob import calc_new_emit_p, calc_new_trans_p, prob_dist
+from hmm_prob import calc_new_emit_p, calc_new_trans_p, posterior_probabilities, prob_dist
 from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
 
 WORKING_DIR = '../'
@@ -106,7 +106,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
     # Find maximum-likelihood ancestors
     (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
 
-    return ancestors_by_state[best_state]
+    return ancestors_by_state[best_state], prob_nodes
 
 
 #-------------
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     # Starting settings
     #  The probabilities are translated into log space later on
     def_start_p = 1/.7
-    def_trans_in_p = .94
+    def_trans_in_p = .64
     def_trans_out_p = (1 - def_trans_in_p) / 6
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
@@ -132,9 +132,10 @@ if __name__ == "__main__":
     fi_per_hotspot = 40  # fold increase per hotspot
     effective_pop = 1  # effective population (N_e) for recombination rate calculations
     num_generations = 25  # number of generations between ancestors and ILS/ISS strains
+    iba_cutoff = .95 # how close probabilities need to be to be considered "identical by ancestor"
     use_hotspots = False
     use_SNP_dist = False
-    use_recomb_rates = True
+    use_recomb_rates = False
 
     verbose = False
     max_run_count = 1
@@ -170,9 +171,9 @@ if __name__ == "__main__":
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
-        ancestors = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
-                            effective_pop, num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates,
-                            verbose)
+        ancestors, prob_nodes = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict,
+                                        recomb_rate_dict, effective_pop, num_generations, input_group, use_hotspots,
+                                        use_SNP_dist, use_recomb_rates, verbose)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
 
@@ -196,6 +197,8 @@ if __name__ == "__main__":
             print 'Total probability distance: %.3f' % tot_prob_dist
 
         run_count += 1
+
+    identical_by_anc, confidence_interval = posterior_probabilities(ancestors, SNPs, prob_nodes, states, iba_cutoff)
 
     print 'Total time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)

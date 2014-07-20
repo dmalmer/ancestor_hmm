@@ -6,7 +6,7 @@ from numpy import array
 
 
 # Generator to loop over only unique ancestors
-def ancestor_blocks(ancestors, SNPs):
+def ancestor_blocks(ancestors, SNPs, prob_nodes=[]):
     curr_i = 0
     while curr_i < len(ancestors):
         start_i = curr_i
@@ -14,7 +14,10 @@ def ancestor_blocks(ancestors, SNPs):
         while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
             curr_i += 1
 
-        yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
+        if any(prob_nodes):
+            yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i], prob_nodes[start_i:curr_i])
+        else:
+            yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
 
 
 def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_pop, num_generations):

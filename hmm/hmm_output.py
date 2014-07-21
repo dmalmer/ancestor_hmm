@@ -31,6 +31,27 @@ def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancest
     print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
 
 
+def write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals):
+    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_conf-int' + unique_output_name +
+                    '.wig', 'w')
+    out_file.write('track type=wiggle_0 graphType=line viewLimits=0:1\n')
+
+    cur_chrom = ''
+    for next_chrom, pos_start, conf in confidence_intervals:
+        if next_chrom != cur_chrom:
+            cur_chrom = next_chrom
+            out_file.write('variableStep chrom=%s\n' % cur_chrom)
+        out_file.write('%s\t%f\n' % (pos_start, conf))
+
+
+def write_indentical_by_ancestor(WORKING_DIR, filename_in, unique_output_name, identical_by_anc):
+    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_IBA' + unique_output_name +
+                    '.bed', 'w')
+
+    for chromosome, pos_start, pos_end, iba in identical_by_anc:
+        out_file.write('%s\t%s\t%s\t%s\n' % (chromosome, pos_start, pos_end, iba))
+
+
 def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, starting_params, run_count, tot_run_time):
     len_before = len(SNPs)
     len_after = 0

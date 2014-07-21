@@ -81,9 +81,17 @@ def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
 
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
-def log_add(log_A, log_B):
+def log_add_pair(log_A, log_B):
     # ***Note***: log_A needs to be greater than log_B, but I'm removing setting the max here to speed things up
     return log_A + log(1. + e ** (log_B - log_A))
+
+
+def log_add_list(log_list):
+    log_list.sort(reverse=True)
+    log_sum = log_list[0]
+    for l in log_list[1:]:
+        log_sum = log_add_pair(log_sum, l)
+    return log_sum
 
 
 # Return a list of pairwise elements

@@ -2,9 +2,9 @@
 
 from collections import defaultdict
 from itertools import izip
-from math import log
+from math import log, e
 
-from hmm_util import ancestor_blocks, pairwise
+from hmm_util import ancestor_blocks, log_add_list, pairwise
 
 
 def calc_new_trans_p(ancestors, states):
@@ -67,27 +67,78 @@ def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_e
     return new_emit_p
 
 
-def posterior_probabilities(ancestors, SNPs, prob_nodes, states, iba_cutoff):
+def calc_confidence_intervals(ancestors, SNPs, prob_nodes):
+    confidence_intervals = []
+    for anc, SNP, p_node in zip(ancestors, SNPs, prob_nodes):
+        p_sum = log_add_list(list(p_node))
+        # (chromosome, start_pos, confidence)
+        confidence_intervals.append((SNP[0], SNP[1], e ** (p_node[anc] - p_sum)))
+    return confidence_intervals
+
+
+def calc_identical_by_ancestor(ancestors, SNPs, prob_nodes, states, IBA_cutoff):
+
     identical_by_anc = []
-    confidence_interval = []
-
     for chromosome, pos_start, pos_end, ancestor, prob_section in ancestor_blocks(ancestors, SNPs, prob_nodes=prob_nodes):
-        print ancestor
-        print prob_section
 
-        sum_probs = 0.
-        cur_iba = []
-        for s in states:
-            if s != ancestor:
-                if sum(prob_section[ancestor])/sum(prob_section[s]) > iba_cutoff:
-                    cur_iba.append(s)
-            sum_probs += sum(prob_section[s])
+        diff_ratios = defaultdict(list)
+        #print 'p_nodes:'
+        for p_node in prob_section:
+            anc_prob = p_node[ancestor]
+            for s in states:
+                if s != ancestor:
+                    diff_ratios[s].append(e ** (p_node[s] - anc_prob))
+        #print diff_ratios
+        IBA = [s for s in states if s != ancestor and sum(diff_ratios[s])/len(diff_ratios[s]) > IBA_cutoff]
+        #print IBA
 
-        if any(cur_iba):
-            identical_by_anc.append(chromosome, pos_start, pos_end, '_'.join(cur_iba))
-        confidence_interval.append((chromosome, pos_start, pos_end, 1./sum(prob_section[ancestor])/sum_probs))
+        if pos_start == '63749154':
+            print 'C3HHe, pos ' + str(pos_start)
+            print prob_section[ancestor]
+            print prob_section['A']
+            print diff_ratios['A']
+            print [sum(diff_ratios[s])/len(diff_ratios[s]) for s in states if s != ancestor]
 
-    return (identical_by_anc, confidence_interval)
+        if any(IBA):
+            print 'IBAs!!'
+            print IBA
+            identical_by_anc.append((chromosome, pos_start, pos_end, '%s_%s' % (ancestor, '_'.join(IBA))))
+
+        #
+        # sum_probs = 0.
+        # cur_iba = []
+        # anc_prob_sum = log_add_list(prob_section[ancestor])
+        # print 'section:'
+        # print prob_section[ancestor]
+        # print 'anc_prob_sum:'
+        # print anc_prob_sum
+        # print 'state sums:'
+        # for s in states:
+        #     if s != ancestor:
+        #         print s
+        #         print 'log space:'
+        #         print log_add_list(prob_section[s])
+        #         print anc_prob_sum - log_add_list(prob_section[s])
+        #
+        #         print 'base 10:'
+        #         print e ** log_add_list(prob_section[s])
+        #         print (e ** anc_prob_sum) / (e ** log_add_list(prob_section[s]))
+        #
+        #         if sum(prob_section[ancestor])/sum(prob_section[s]) > iba_cutoff:
+        #             cur_iba.append(s)
+        #     sum_probs += sum(prob_section[s])
+        #
+        # if any(cur_iba):
+        #     identical_by_anc.append((chromosome, pos_start, pos_end, '_'.join(cur_iba)))
+        #
+        # # conf_int = prob of flipping a coin [1/7] - prob of choice [prob_anc / sum(prob_every_state)]
+        # confidence_interval.append((chromosome, pos_start, pos_end, (1./7) - sum(prob_section[ancestor])/sum_probs))
+
+        #if sum(prob_section[ancestor])/sum_probs < .1:
+        #    print prob_section
+        #    print sum(prob_section[ancestor])/sum_probs
+
+    return identical_by_anc
 
 
 def prob_dist(old_probs, new_probs):

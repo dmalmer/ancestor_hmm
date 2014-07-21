@@ -6,9 +6,10 @@ from numpy import loadtxt, zeros
 from os import environ
 from time import time
 
-from hmm_output import print_ancestors, write_ancestors_to_file, write_statistics
-from hmm_prob import calc_new_emit_p, calc_new_trans_p, posterior_probabilities, prob_dist
-from hmm_util import calc_recomb_rate, count_hotspots, log_add, read_hotspots_data, read_recomb_rates_data
+from hmm_output import print_ancestors, write_ancestors_to_file, write_confidence_interval, \
+                       write_indentical_by_ancestor, write_statistics
+from hmm_prob import calc_confidence_intervals, calc_identical_by_ancestor, calc_new_emit_p, calc_new_trans_p, prob_dist
+from hmm_util import calc_recomb_rate, count_hotspots, log_add_pair, read_hotspots_data, read_recomb_rates_data
 
 WORKING_DIR = '../'
 try:
@@ -84,7 +85,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
                         # hopefully I can eventually remove this check to speed things up (should always be true)
                         if curr_trans_p < trans_p[prev_state][prev_state]*j:
                             raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
-                        curr_trans_p = log_add(curr_trans_p, trans_p[prev_state][prev_state]*j)
+                        curr_trans_p = log_add_pair(curr_trans_p, trans_p[prev_state][prev_state]*j)
                     curr_trans_p += trans_p[prev_state][curr_state] + log(expected_recombs)
 
                     # Only apply hotspot fold increase to transition probabilities from one state to a different state
@@ -132,12 +133,12 @@ if __name__ == "__main__":
     fi_per_hotspot = 40  # fold increase per hotspot
     effective_pop = 1  # effective population (N_e) for recombination rate calculations
     num_generations = 25  # number of generations between ancestors and ILS/ISS strains
-    iba_cutoff = .95 # how close probabilities need to be to be considered "identical by ancestor"
+    iba_cutoff = .90 # how close probabilities need to be to be considered "identical by ancestor"
     use_hotspots = False
     use_SNP_dist = False
     use_recomb_rates = False
 
-    verbose = False
+    verbose = True
     max_run_count = 1
 
     # Read in SNP data
@@ -198,7 +199,8 @@ if __name__ == "__main__":
 
         run_count += 1
 
-    identical_by_anc, confidence_interval = posterior_probabilities(ancestors, SNPs, prob_nodes, states, iba_cutoff)
+    confidence_intervals = calc_confidence_intervals(ancestors, SNPs, prob_nodes)
+    identical_by_anc = calc_identical_by_ancestor(ancestors, SNPs, prob_nodes, states, iba_cutoff)
 
     print 'Total time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
@@ -207,6 +209,10 @@ if __name__ == "__main__":
         print_ancestors(ancestors, SNPs, 'Viterbi')
 
     filename_in = sys.argv[1].rsplit('/', 1)[1]
+
+    write_indentical_by_ancestor(WORKING_DIR, filename_in, unique_output_name, identical_by_anc)
+    write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals)
+
     write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, state_RGBs)
     write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, (def_trans_in_p, def_trans_out_p,
                      def_emit_same_p, def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),

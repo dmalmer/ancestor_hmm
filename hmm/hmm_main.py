@@ -21,8 +21,9 @@ except KeyError:
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict, recomb_rate_dict, effective_pop,
-            num_generations, input_group, use_hotspots, use_SNP_dist, use_recomb_rates, verbose):
+def viterbi(SNPs, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot=None, hotspot_dict=None,
+            recomb_rate_dict=None, effective_pop=None, num_generations=None, use_hotspots=False, use_SNP_dist=False,
+            use_recomb_rates=False, verbose=False):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -137,7 +138,7 @@ if __name__ == "__main__":
     def_start_p = 1/.7
     def_trans_in_p = .94
     def_trans_out_p = (1 - def_trans_in_p) / 6
-    def_emit_same_p = .95
+    def_emit_same_p = .99
     def_emit_other_p = 1 - def_emit_same_p
 
     fi_per_hotspot = 40  # fold increase per hotspot
@@ -148,8 +149,8 @@ if __name__ == "__main__":
     use_SNP_dist = False
     use_recomb_rates = True
 
-    verbose = True
-    max_run_count = 50
+    verbose = False
+    max_run_count = 5
 
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
@@ -166,7 +167,7 @@ if __name__ == "__main__":
     # States
     states = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
     state_RGBs = {'Unk': '128,128,128', 'A': '0,153,0', 'ARK': '51,51,255', 'BALBc': '255,255,51',
-                  'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51'}
+                  'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
 
     # Start, transition, and emission probabilities
     start_p = {s: log(def_start_p) for s in states}
@@ -182,9 +183,9 @@ if __name__ == "__main__":
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
-        ancestors, prob_nodes = viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict,
-                                        recomb_rate_dict, effective_pop, num_generations, input_group, use_hotspots,
-                                        use_SNP_dist, use_recomb_rates, verbose)
+        ancestors, prob_nodes = viterbi(SNPs, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot, hotspot_dict,
+                                        recomb_rate_dict, effective_pop, num_generations, use_hotspots, use_SNP_dist,
+                                        use_recomb_rates, verbose)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)

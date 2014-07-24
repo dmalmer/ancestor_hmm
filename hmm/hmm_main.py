@@ -135,7 +135,7 @@ if __name__ == "__main__":
     # Starting settings
     #  The probabilities are translated into log space later on
     def_start_p = 1/.7
-    def_trans_in_p = .64
+    def_trans_in_p = .94
     def_trans_out_p = (1 - def_trans_in_p) / 6
     def_emit_same_p = .95
     def_emit_other_p = 1 - def_emit_same_p
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     use_recomb_rates = True
 
     verbose = True
-    max_run_count = 1
+    max_run_count = 50
 
     # Read in SNP data
     SNPs = loadtxt(sys.argv[1], dtype='string')
@@ -187,14 +187,10 @@ if __name__ == "__main__":
                                         use_SNP_dist, use_recomb_rates, verbose)
 
         new_trans_p = calc_new_trans_p(ancestors, states)
-
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
-        trans_p = new_trans_p
 
         new_emit_p = calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p)
-
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
-        emit_p = new_emit_p
 
         if verbose:
             print 'Transition probabilities'
@@ -206,6 +202,9 @@ if __name__ == "__main__":
             print '  After:  ' + str(new_emit_p)
 
             print 'Total probability distance: %.3f' % tot_prob_dist
+
+        trans_p = new_trans_p
+        emit_p = new_emit_p
 
         run_count += 1
 

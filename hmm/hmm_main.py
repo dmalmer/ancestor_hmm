@@ -78,7 +78,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
             for prev_state in states:
                 curr_hotspot_fi = 1
                 if prev_state == curr_state:
-                    curr_trans_p = (trans_p[prev_state][curr_state] * SNP_dist) + log(1. / expected_recombs)
+                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
                 else:
                     curr_trans_p = 0.
                     for j in range(1,SNP_dist):
@@ -86,7 +86,7 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
                         if curr_trans_p < trans_p[prev_state][prev_state]*j:
                             raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
                         curr_trans_p = log_add_pair(curr_trans_p, trans_p[prev_state][prev_state]*j)
-                    curr_trans_p += trans_p[prev_state][curr_state] + log(expected_recombs)
+                    curr_trans_p += trans_p[prev_state][curr_state]
 
                     # Only apply hotspot fold increase to transition probabilities from one state to a different state
                     curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
@@ -95,10 +95,20 @@ def viterbi(SNPs, states, start_p, trans_p, emit_p, fi_per_hotspot, hotspot_dict
                 state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(curr_hotspot_fi) +
                                             emit_p[curr_state][emit_key], prev_state))
 
-            (prob, prev_state) = max(state_probabilities)
+            # print 'expected recombs:'
+            # print expected_recombs
+            # print 'state_probs:'
+            # print state_probabilities
+            # print 'max(state_probs):'
+            # print max(state_probabilities)
+            # print [(prob + log(expected_recombs), prev_s) if curr_state != prev_s else (prob, prev_s) for prob, prev_s in state_probabilities]
+            # print max([(prob + log(expected_recombs), prob, prev_s) if curr_state != prev_s else (prob, prob, prev_s) for prob, prev_s in state_probabilities])
+            (recomb_prob, orig_prob, prev_state) = max([(prob + log(expected_recombs), prob, prev_s)
+                                                        if curr_state != prev_s else (prob, prob, prev_s)
+                                                        for prob, prev_s in state_probabilities])
 
             # Keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
-            prob_nodes[i][curr_state] = prob
+            prob_nodes[i][curr_state] = orig_prob
             new_ancestors_by_state[curr_state] = ancestors_by_state[prev_state] + [curr_state]
 
         # Update ancestors with additional iteration
@@ -136,7 +146,7 @@ if __name__ == "__main__":
     iba_cutoff = .90 # how close probabilities need to be to be considered "identical by ancestor"
     use_hotspots = False
     use_SNP_dist = False
-    use_recomb_rates = False
+    use_recomb_rates = True
 
     verbose = True
     max_run_count = 1

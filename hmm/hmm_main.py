@@ -1,7 +1,11 @@
 
 import sys
 
+import pathos
+
+from itertools import izip, repeat
 from math import log
+from pathos.multiprocessing import Pool
 from numpy import loadtxt, zeros
 from os import environ
 from time import time
@@ -22,102 +26,100 @@ except KeyError:
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot=None, hotspot_dict=None,
+def viterbi(SNPs, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot=None, hotspot_dict=None,
             recomb_rate_dict=None, effective_pop=None, num_generations=None, use_hotspots=False, use_SNP_dist=False,
             use_recomb_rates=False, verbose=False):
-    # Create a separate path for each chromosome
-    paths_by_chr = {}
+    # Initialize
+    prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
+    ancestors_by_state = {}
+    recomb_index = None # Initially set to None so calc_recomb_rate uses a special case when called for the first time
 
-    for curr_chr, SNPs in SNPs_by_chr.items():
-        # Initialize
-        prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
-        ancestors_by_state = {}
-        recomb_index = None # Initially set to None so calc_recomb_rate uses a special case when called for the first time
-
-        # Start probabilities
-        for s in states:
-            # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-            emit_key = s
-            if s == 'Unk':
-                if SNPs[0][3] != input_group:
-                    emit_key = '~' + s
-            elif s not in SNPs[0][3].split('_'):
+    # Start probabilities
+    for s in states:
+        # For each state, the emission probability is either emit_p[state] or emit_p[~state]
+        emit_key = s
+        if s == 'Unk':
+            if SNPs[0][3] != input_group:
                 emit_key = '~' + s
-            # Probability of a given state at SNPs[0] is the (start prob of state) * (emit prob of state)
-            prob_nodes[0][s] = start_p[s] + emit_p[s][emit_key]
-            ancestors_by_state[s] = [s]
+        elif s not in SNPs[0][3].split('_'):
+            emit_key = '~' + s
+        # Probability of a given state at SNPs[0] is the (start prob of state) * (emit prob of state)
+        prob_nodes[0][s] = start_p[s] + emit_p[s][emit_key]
+        ancestors_by_state[s] = [s]
 
-        # Rest of probabilities
-        for i in range(1, len(SNPs)):
-            if verbose and i % 1000 == 0:
-                print 'i = ' + str(i)
-            new_ancestors_by_state = {}
+    # Rest of probabilities
+    for i in range(1, len(SNPs)):
+        if verbose and i % 1000 == 0:
+            print 'i = ' + str(i)
+        new_ancestors_by_state = {}
 
-            # Use of additional data flags
-            hotspots_count = 0
-            if use_hotspots:
-                hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
+        # Use of additional data flags
+        hotspots_count = 0
+        if use_hotspots:
+            hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
 
-            SNP_dist = 1
-            if use_SNP_dist:
-                SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
+        SNP_dist = 1
+        if use_SNP_dist:
+            SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
 
-            expected_recombs = 1.
-            if use_recomb_rates and len(recomb_rate_dict[SNPs[i][0]]) > 0:
-                expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
-                                                                  recomb_rate_dict[SNPs[i][0]], effective_pop,
-                                                                  num_generations)
+        expected_recombs = 1.
+        if use_recomb_rates and len(recomb_rate_dict[SNPs[i][0]]) > 0:
+            expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
+                                                              recomb_rate_dict[SNPs[i][0]], effective_pop,
+                                                              num_generations)
 
-            # At every SNP, find probabilities for each state
-            for curr_state in states:
-                # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-                emit_key = curr_state
-                if curr_state == 'Unk':
-                    if SNPs[i][3] != input_group:
-                        emit_key = '~' + curr_state
-                elif curr_state not in SNPs[i][3].split('_'):
+        # At every SNP, find probabilities for each state
+        for curr_state in states:
+            # For each state, the emission probability is either emit_p[state] or emit_p[~state]
+            emit_key = curr_state
+            if curr_state == 'Unk':
+                if SNPs[i][3] != input_group:
                     emit_key = '~' + curr_state
+            elif curr_state not in SNPs[i][3].split('_'):
+                emit_key = '~' + curr_state
 
-                # The probability of a given state for a given SNP is the maximum out of ((prob prev_state) *
-                #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
-                state_probabilities = []
-                for prev_state in states:
-                    curr_hotspot_fi = 1
-                    if prev_state == curr_state:
-                        curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
-                    else:
-                        curr_trans_p = 0.
-                        for j in range(1,SNP_dist):
-                            # hopefully I can eventually remove this check to speed things up (should always be true)
-                            if curr_trans_p < trans_p[prev_state][prev_state]*j:
-                                raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
-                            curr_trans_p = log_add_pair(curr_trans_p, trans_p[prev_state][prev_state]*j)
-                        curr_trans_p += trans_p[prev_state][curr_state]
+            # The probability of a given state for a given SNP is the maximum out of ((prob prev_state) *
+            #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
+            state_probabilities = []
+            for prev_state in states:
+                curr_hotspot_fi = 1
+                if prev_state == curr_state:
+                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
+                else:
+                    curr_trans_p = 0.
+                    for j in range(1,SNP_dist):
+                        # hopefully I can eventually remove this check to speed things up (should always be true)
+                        if curr_trans_p < trans_p[prev_state][prev_state]*j:
+                            raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
+                        curr_trans_p = log_add_pair(curr_trans_p, trans_p[prev_state][prev_state]*j)
+                    curr_trans_p += trans_p[prev_state][curr_state]
 
-                        # Only apply hotspot fold increase to transition probabilities from one state to a different state
-                        curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
+                    # Only apply hotspot fold increase to transition probabilities from one state to a different state
+                    curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
 
-                    # Calculate probabilities
-                    state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(curr_hotspot_fi) +
-                                                emit_p[curr_state][emit_key], prev_state))
+                # Calculate probabilities
+                state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(curr_hotspot_fi) +
+                                            emit_p[curr_state][emit_key], prev_state))
 
-                (recomb_prob, orig_prob, prev_state) = max([(prob + log(expected_recombs), prob, prev_s)
-                                                            if curr_state != prev_s else (prob, prob, prev_s)
-                                                            for prob, prev_s in state_probabilities])
+            (recomb_prob, orig_prob, prev_state) = max([(prob + log(expected_recombs), prob, prev_s)
+                                                        if curr_state != prev_s else (prob, prob, prev_s)
+                                                        for prob, prev_s in state_probabilities])
 
-                # Keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
-                prob_nodes[i][curr_state] = orig_prob
-                new_ancestors_by_state[curr_state] = ancestors_by_state[prev_state] + [curr_state]
+            # Keep track of probabilities in prob_nodes and ancestors in new_ancestors_by_state for each curr_state
+            prob_nodes[i][curr_state] = orig_prob
+            new_ancestors_by_state[curr_state] = ancestors_by_state[prev_state] + [curr_state]
 
-            # Update ancestors with additional iteration
-            ancestors_by_state = new_ancestors_by_state
+        # Update ancestors with additional iteration
+        ancestors_by_state = new_ancestors_by_state
 
-        # Find maximum-likelihood ancestors for the current chromosome
-        (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
-        paths_by_chr[curr_chr] = ancestors_by_state[best_state]
+    # Find maximum-likelihood ancestors for the current chromosome
+    (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
 
-    # Returns best paths for each chromosome
-    return paths_by_chr
+    return ancestors_by_state[best_state]
+
+
+def viterbi_star(arg_list):
+    return viterbi(*arg_list)
 
 
 #-------------
@@ -149,7 +151,7 @@ if __name__ == "__main__":
     use_recomb_rates = True
 
     verbose = False
-    max_run_count = 5
+    max_run_count = 50
 
     # Read in data
     SNPs_by_chr = read_SNP_data(sys.argv[1])
@@ -177,9 +179,12 @@ if __name__ == "__main__":
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
-        ancestors_by_chr = viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot, hotspot_dict,
-                                        recomb_rate_dict, effective_pop, num_generations, use_hotspots, use_SNP_dist,
-                                        use_recomb_rates, verbose)
+        pool = Pool(processes=2)
+        ancestors_by_chr = pool.map(viterbi_star, izip(SNPs_by_chr.values(), repeat(states), repeat(start_p),
+                                    repeat(trans_p), repeat(emit_p), repeat(input_group), repeat(fi_per_hotspot),
+                                    repeat(hotspot_dict), repeat(recomb_rate_dict), repeat(effective_pop),
+                                    repeat(num_generations), repeat(use_hotspots), repeat(use_SNP_dist),
+                                    repeat(use_recomb_rates), repeat(verbose)))
 
         new_trans_p = calc_new_trans_p(ancestors_by_chr, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)

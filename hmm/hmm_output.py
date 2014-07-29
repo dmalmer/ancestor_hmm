@@ -4,31 +4,18 @@ from os.path import isfile
 
 from hmm_util import ancestor_blocks
 
-import os
 
-def print_ancestors(ancestors, SNPs, title):
-    print ''
-    print title
-    cur = ''
-    for i in range(len(ancestors)):
-        if cur != ancestors[i]:
-            print str(SNPs[i][1]) + ': ' + ancestors[i]
-            cur = ancestors[i]
-
-
-def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, state_RGBs):
+def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
     out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
                     '.' + filename_in.rsplit('.', 1)[1], 'w')
 
     out_len = 0
-    for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
-        out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\t0\t+\t' + pos_start + '\t' +
-                        pos_end + '\t' + state_RGBs[ancestor] + '\n')
-        out_len += 1
+    for curr_chr in sorted(ancestors_by_chr.keys()):
+        for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
+            out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\t0\t+\t' + pos_start + '\t' +
+                            pos_end + '\t' + state_RGBs[ancestor] + '\n')
+            out_len += 1
     out_file.close()
-
-    print '\nOutput file length: ' + str(out_len)
-    print 'Percentage change: ' + str(float(len(SNPs)-out_len)/float(len(SNPs)))
 
 
 def write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals):
@@ -52,14 +39,17 @@ def write_indentical_by_ancestor(WORKING_DIR, filename_in, unique_output_name, i
         out_file.write('%s\t%s\t%s\t%s\n' % (chromosome, pos_start, pos_end, iba))
 
 
-def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors, SNPs, starting_params, run_count, tot_run_time):
-    len_before = len(SNPs)
+def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params, run_count, tot_run_time):
+    len_before = 0
+    for SNPs in SNPs_by_chr.values():
+        len_before += len(SNPs)
     len_after = 0
     anc_counts = defaultdict(int)
 
-    for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs):
-        anc_counts[ancestor] += 1
-        len_after += 1
+    for curr_chr in ancestors_by_chr.keys():
+        for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
+            anc_counts[ancestor] += 1
+            len_after += 1
 
     line = '%i\t%i\t%.3f\t%.5f\t%.5f\t%.2f\t%.2f\t%.1f\t%s\t%s\t%s\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%.3f\t%i\t%i\n' % \
            (len_before, len_after, float(len_before-len_after)/len_before, starting_params[0], starting_params[1],

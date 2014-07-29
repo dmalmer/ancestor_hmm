@@ -6,7 +6,7 @@ from numpy import array
 
 
 # Generator to loop over only unique ancestors
-def ancestor_blocks(ancestors, SNPs, prob_nodes=[]):
+def ancestor_blocks(ancestors, SNPs, return_SNPs=False):
     curr_i = 0
     while curr_i < len(ancestors):
         start_i = curr_i
@@ -14,8 +14,8 @@ def ancestor_blocks(ancestors, SNPs, prob_nodes=[]):
         while curr_i < len(ancestors) and ancestors[curr_i-1] == ancestors[curr_i]:
             curr_i += 1
 
-        if any(prob_nodes):
-            yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i], prob_nodes[start_i:curr_i])
+        if return_SNPs:
+            yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i], SNPs[start_i:curr_i])
         else:
             yield (SNPs[start_i,0], SNPs[start_i,1], SNPs[curr_i-1,2], ancestors[start_i])
 
@@ -140,3 +140,19 @@ def read_recomb_rates_data(filename):
     return recomb_rate_dict
 
 
+def read_SNP_data(filename):
+    # Divide SNP data into dictionary by chromosome
+    SNPs_dict = defaultdict(list)
+    with open(filename, 'r') as f:
+        line = f.readline().strip()
+        while line != '':
+            cols = line.split('\t')
+            SNPs_dict[cols[0]].append(cols)
+
+            line = f.readline().strip()
+
+    # Conver to numpy arrays
+    for k, v in SNPs_dict.items():
+        SNPs_dict[k] = array(v)
+
+    return SNPs_dict

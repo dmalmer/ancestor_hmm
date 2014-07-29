@@ -7,10 +7,11 @@ from math import log, e
 from hmm_util import ancestor_blocks, log_add_list, pairwise
 
 
-def calc_new_trans_p(ancestors, states):
+def calc_new_trans_p(ancestors_by_chr, states):
     # set minimum transition counts to 1 so we don't have any 0 probabilities
     trans_counts = {s_outer: {s_inner: 1 for s_inner in states} for s_outer in states}
-    for anc_prev, anc_curr in pairwise(ancestors):
+    for ancestors in ancestors_by_chr.values():
+        for anc_prev, anc_curr in pairwise(ancestors):
             trans_counts[anc_prev][anc_curr] += 1
 
     new_trans_p = {}
@@ -23,7 +24,7 @@ def calc_new_trans_p(ancestors, states):
     return new_trans_p
 
 
-def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_emit_other_p):
+def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_group, def_emit_same_p, def_emit_other_p):
     # SNP_counts[<state>] = total number of <state> appearances
     # SNP_counts[<~state>] = total number of <~state> appearances
     SNP_counts = defaultdict(int)
@@ -31,22 +32,23 @@ def calc_new_emit_p(ancestors, SNPs, states, input_group, def_emit_same_p, def_e
     # ancestor_counts[<~state>] = total number of calculated <state> when <state> is NOT observed
     ancestor_counts = defaultdict(int)
 
-    for i in range(len(SNPs)):
-        # SNP_counts
-        for s in states:
-            SNP_key = s
-            if s == 'Unk':
-                if SNPs[i][3] != input_group:
+    for curr_chr, ancestors in ancestors_by_chr.items():
+        for i in range(len(SNPs_by_chr[curr_chr])):
+            # SNP_counts
+            for s in states:
+                SNP_key = s
+                if s == 'Unk':
+                    if SNPs_by_chr[curr_chr][i][3] != input_group:
+                        SNP_key = '~' + s
+                elif s not in SNPs_by_chr[curr_chr][i][3].split('_'):
                     SNP_key = '~' + s
-            elif s not in SNPs[i][3].split('_'):
-                SNP_key = '~' + s
-            SNP_counts[SNP_key] += 1
+                SNP_counts[SNP_key] += 1
 
-        # ancestor_counts
-        if ancestors[i] in SNPs[i][3].split('_'):
-            ancestor_counts[ancestors[i]] += 1
-        else:
-            ancestor_counts['~'+ancestors[i]] += 1
+            # ancestor_counts
+            if ancestors[i] in SNPs_by_chr[curr_chr][i][3].split('_'):
+                ancestor_counts[ancestors[i]] += 1
+            else:
+                ancestor_counts['~'+ancestors[i]] += 1
 
     new_emit_p = {}
     for s in states:
@@ -76,7 +78,17 @@ def calc_confidence_intervals(ancestors, SNPs, prob_nodes):
     return confidence_intervals
 
 
-def calc_identical_by_ancestor(ancestors, SNPs, prob_nodes, states, IBA_cutoff):
+def calc_identical_by_ancestor(ancestors, SNPs, trans_p, emit_p, states, IBA_cutoff):
+    prev_anc = ''
+    identical_by_anc = []
+    for chromosome, pos_start, pos_end, ancestor, SNPs_section in ancestor_blocks(ancestors, SNPs, return_SNPs=True):
+        for s in states:
+            pass
+        print SNPs_section
+
+        prev_anc = ancestor
+
+def calc_identical_by_ancestor_old(ancestors, SNPs, prob_nodes, states, IBA_cutoff):
 
     identical_by_anc = []
     for chromosome, pos_start, pos_end, ancestor, prob_section in ancestor_blocks(ancestors, SNPs, prob_nodes=prob_nodes):
@@ -88,21 +100,29 @@ def calc_identical_by_ancestor(ancestors, SNPs, prob_nodes, states, IBA_cutoff):
             for s in states:
                 if s != ancestor:
                     diff_ratios[s].append(e ** (p_node[s] - anc_prob))
-        #print diff_ratios
         IBA = [s for s in states if s != ancestor and sum(diff_ratios[s])/len(diff_ratios[s]) > IBA_cutoff]
-        #print IBA
 
-        if pos_start == '63749154':
-            print 'C3HHe, pos ' + str(pos_start)
-            print prob_section[ancestor]
-            print prob_section['A']
-            print diff_ratios['A']
-            print [sum(diff_ratios[s])/len(diff_ratios[s]) for s in states if s != ancestor]
-
-        if any(IBA):
-            print 'IBAs!!'
-            print IBA
-            identical_by_anc.append((chromosome, pos_start, pos_end, '%s_%s' % (ancestor, '_'.join(IBA))))
+        # if pos_start == '90310154':
+        #     print 'at pos = 90310154:'
+        #     print 'anc_prob = ' + str(prob_section[ancestor])
+        #     for s in states:
+        #         print 'state = ' + str(s)
+        #         print prob_section[s]
+        #         print diff_ratios[s]
+        #         print sum(diff_ratios[s])
+        #         print len(diff_ratios[s])
+        #
+        # if pos_start == '63749154':
+        #     print 'C3HHe, pos ' + str(pos_start)
+        #     print prob_section[ancestor]
+        #     print prob_section['A']
+        #     print diff_ratios['A']
+        #     print [sum(diff_ratios[s])/len(diff_ratios[s]) for s in states if s != ancestor]
+        #
+        # if any(IBA):
+        #     print 'IBAs!!'
+        #     print IBA
+        #     identical_by_anc.append((chromosome, pos_start, pos_end, '%s_%s' % (ancestor, '_'.join(IBA))))
 
         #
         # sum_probs = 0.

@@ -215,6 +215,6 @@ if __name__ == "__main__":
     #write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals)
 
     write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs)
-    write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, (def_trans_in_p, def_trans_out_p,
-                     def_emit_same_p, def_emit_other_p, fi_per_hotspot, use_hotspots, use_SNP_dist, use_recomb_rates),
+    write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, (use_recomb_rates,
+                     def_trans_in_p, def_trans_out_p, def_emit_same_p, def_emit_other_p, trans_p, emit_p),
                      run_count, time() - time_start)

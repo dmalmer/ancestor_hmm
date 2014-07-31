@@ -129,7 +129,7 @@ if __name__ == "__main__":
 
     # Input/output names
     input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if \
-        sys.argv[1].strip().split('/')[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
+        sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
     unique_output_name = ''
 
     # Starting settings

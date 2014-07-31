@@ -3,6 +3,7 @@
 from collections import defaultdict
 from itertools import izip
 from math import log, e
+from numpy import mean
 
 from hmm_util import ancestor_blocks, log_add_list, pairwise
 
@@ -66,6 +67,11 @@ def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_group, def_emit
             new_emit_p[s][s] = log(min(normalizer * state_p, .99))
             new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, .01))
 
+    # Take mean of each state to fix emission probabilities across states
+    mean_same = mean([e ** new_emit_p[s][s] for s in states])
+    mean_other = mean([e ** new_emit_p[s]['~'+s] for s in states])
+    new_emit_p = {s: {s: log(mean_same), '~'+s: log(mean_other)} for s in states}
+    
     return new_emit_p
 
 

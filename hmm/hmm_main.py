@@ -8,7 +8,7 @@ from time import time
 
 from hmm_output import write_ancestors_to_file, write_confidence_interval, \
                        write_indentical_by_ancestor, write_statistics
-from hmm_prob import calc_confidence_intervals, calc_identical_by_ancestor, calc_new_emit_p, calc_new_trans_p, prob_dist
+from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, label_identical_ancestors, prob_dist
 from hmm_util import calc_recomb_rate, count_hotspots, log_add_pair, read_hotspots_data, read_recomb_rates_data, \
                      read_SNP_data
 
@@ -143,7 +143,6 @@ if __name__ == "__main__":
     fi_per_hotspot = 40  # fold increase per hotspot
     effective_pop = 1  # effective population (N_e) for recombination rate calculations
     num_generations = 25  # number of generations between ancestors and ILS/ISS strains
-    iba_cutoff = .90 # how close probabilities need to be to be considered "identical by ancestor"
     use_hotspots = False
     use_SNP_dist = False
     use_recomb_rates = True
@@ -177,10 +176,15 @@ if __name__ == "__main__":
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
+        # Run viterbi to find maximum likelihood path
         ancestors_by_chr = viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot, hotspot_dict,
                                         recomb_rate_dict, effective_pop, num_generations, use_hotspots, use_SNP_dist,
                                         use_recomb_rates, verbose)
 
+        # Label segments where SNP counts for multiple ancestors are identical
+        ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_group)
+
+        # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
 
@@ -204,7 +208,6 @@ if __name__ == "__main__":
         run_count += 1
 
     #confidence_intervals = calc_confidence_intervals(ancestors, SNPs)
-    #identical_by_anc = calc_identical_by_ancestor(ancestors, SNPs, trans_p, emit_p, states, iba_cutoff)
 
     print 'Total time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)

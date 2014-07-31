@@ -12,8 +12,11 @@ def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancest
     out_len = 0
     for curr_chr in sorted(ancestors_by_chr.keys()):
         for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
+            color_key = ancestor
+            if '_' in color_key:
+                color_key = 'IBA'
             out_file.write(chromosome + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\t0\t+\t' + pos_start + '\t' +
-                            pos_end + '\t' + state_RGBs[ancestor] + '\n')
+                            pos_end + '\t' + state_RGBs[color_key] + '\n')
             out_len += 1
     out_file.close()
 

@@ -1,5 +1,6 @@
 
 from collections import defaultdict
+from datetime import datetime
 from os.path import isfile
 
 from hmm_util import ancestor_blocks
@@ -54,17 +55,18 @@ def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_
             anc_counts[ancestor] += 1
             len_after += 1
 
-    line = '{0}\t{1}\t{2:.2%}\t{3:.3f}\t{4:.3f}\t{5:.3f}\t{6:.3f}\t{7:.3f}\t{8:.3f}\t{9}\t'.format(
-                len_before, # {0} - input file length
-                len_after, # {1} - output file length
-                float(len_before-len_after)/len_before, # {2} - percentage difference
-                anc_counts['A']/float(len_after), # {3}
-                anc_counts['ARK']/float(len_after), # {4}
-                anc_counts['BALBc']/float(len_after), # {5}
-                anc_counts['C3HHe']/float(len_after), # {6}
-                anc_counts['C57BL6N']/float(len_after), # {7}
-                anc_counts['DBA2']/float(len_after), # {8}
-                anc_counts['Unk']/float(len_after) # {9}
+    line = '{0}\t{1}\t{2}\t{3:.2%}\t{4:.3f}\t{5:.3f}\t{6:.3f}\t{7:.3f}\t{8:.3f}\t{9:.3f}\t{10}\t'.format(
+                datetime.now().strftime('%m/%d/%y-%H:%M'), # {0} - date and time of run
+                len_before, # {1} - input file length
+                len_after, # {2} - output file length
+                float(len_before-len_after)/len_before, # {3} - percentage difference
+                anc_counts['A']/float(len_after), # {4}
+                anc_counts['ARK']/float(len_after), # {5}
+                anc_counts['BALBc']/float(len_after), # {6}
+                anc_counts['C3HHe']/float(len_after), # {7}
+                anc_counts['C57BL6N']/float(len_after), # {8}
+                anc_counts['DBA2']/float(len_after), # {9}
+                anc_counts['Unk']/float(len_after) # {10}
             )
     line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\n'.format(
                 run_count, # {0}
@@ -81,9 +83,9 @@ def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_
     filename_out = WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
                     '.txt'
     if not isfile(filename_out):
-        line = 'Start_len\tFinal_len\t%_diff\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\tRun_count\t' + \
-               'Total_run_time(s)\tUse_recomb_rates\tStart_trans_in\tStart_trans_out\tStart_emit_same\tStart_emit_other\t' + \
-               'Final_trans_p\tFinal_emit_p\n' + line
+        line = 'Datetime\tStart_len\tFinal_len\t%_diff\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\t' + \
+               'Run_count\tTotal_run_time(s)\tUse_recomb_rates\tStart_trans_in\tStart_trans_out\tStart_emit_same\t' + \
+               'Start_emit_other\tFinal_trans_p\tFinal_emit_p\n' + line
 
     with open(filename_out, 'a') as f:
         f.write(line)

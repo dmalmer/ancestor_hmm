@@ -9,4 +9,4 @@
 #PBS -m ae
 #PBS -M daniel.malmer@colorado.edu
 
-python2.7 /Users/dama9282/AncestorInference/hmm/hmm_main.py /Users/dama9282/AncestorInference/data/${STRAIN}_temporary_sorted_chr${CHR}.bed
+python2.7 /Users/dama9282/AncestorInference/hmm/hmm_main.py /Users/dama9282/AncestorInference/data/${STRAIN}_temporary_sorted${CHR}.bed

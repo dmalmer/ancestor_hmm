@@ -61,7 +61,8 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_po
         expected_recombs += ((((SNP_end - recomb_map[recomb_end_i-1][0]) / 1000.) * recomb_map[recomb_end_i-1][1]) / \
                              (4 * effective_pop)) * num_generations
 
-    return expected_recombs, recomb_main_i
+    # expected_recombs must be > 0 in order to convert to log space
+    return max(expected_recombs, .0000000001), recomb_main_i
 
 
 # Count the number of hotspots between two chromosome positions

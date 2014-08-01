@@ -27,7 +27,7 @@ def calc_new_trans_p(ancestors_by_chr, states):
     return new_trans_p
 
 
-def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, def_emit_same_p, def_emit_other_p):
+def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, start_emit_same_p):
     # SNP_counts[<state>] = total number of <state> appearances
     # SNP_counts[<~state>] = total number of <~state> appearances
     SNP_counts = defaultdict(int)
@@ -59,8 +59,8 @@ def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, def_emi
         new_emit_p[s] = {}
         # if we don't observe or calculate a state, use the default probabilities
         if SNP_counts[s] == 0 or ancestor_counts[s] == 0:
-            new_emit_p[s][s] = log(def_emit_same_p)
-            new_emit_p[s]['~'+s] = log(def_emit_other_p)
+            new_emit_p[s][s] = log(start_emit_same_p)
+            new_emit_p[s]['~'+s] = log(1 - start_emit_same_p)
         else:
             # normalize <state> and <~state> probabilities to one
             state_p = float(ancestor_counts[s]) / SNP_counts[s]

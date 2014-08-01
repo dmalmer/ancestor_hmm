@@ -6,8 +6,8 @@ from os.path import isfile
 from hmm_util import ancestor_blocks
 
 
-def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
-    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
+def write_ancestors_to_file(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
+    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
                     '.' + filename_in.rsplit('.', 1)[1], 'w')
 
     out_len = 0
@@ -22,8 +22,8 @@ def write_ancestors_to_file(WORKING_DIR, filename_in, unique_output_name, ancest
     out_file.close()
 
 
-def write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals):
-    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_conf-int' + unique_output_name +
+def write_confidence_interval(working_dir, filename_in, unique_output_name, confidence_intervals):
+    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_conf-int' + unique_output_name +
                     '.wig', 'w')
     out_file.write('track type=wiggle_0 graphType=line viewLimits=0:1\n')
 
@@ -35,15 +35,16 @@ def write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, conf
         out_file.write('%s\t%f\n' % (pos_start, conf))
 
 
-def write_indentical_by_ancestor(WORKING_DIR, filename_in, unique_output_name, identical_by_anc):
-    out_file = open(WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_IBA' + unique_output_name +
+def write_indentical_by_ancestor(working_dir, filename_in, unique_output_name, identical_by_anc):
+    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_IBA' + unique_output_name +
                     '.bed', 'w')
 
     for chromosome, pos_start, pos_end, iba in identical_by_anc:
         out_file.write('%s\t%s\t%s\t%s\n' % (chromosome, pos_start, pos_end, iba))
 
 
-def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params, run_count, tot_run_time):
+def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params,
+                     run_count, tot_run_time):
     len_before = 0
     for SNPs in SNPs_by_chr.values():
         len_before += len(SNPs)
@@ -68,24 +69,22 @@ def write_statistics(WORKING_DIR, filename_in, unique_output_name, ancestors_by_
                 anc_counts['DBA2']/float(len_after), # {9}
                 anc_counts['Unk']/float(len_after) # {10}
             )
-    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\n'.format(
+    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\n'.format(
                 run_count, # {0}
                 tot_run_time, # {1}
                 starting_params[0], # {2} - use_recomb_rates
                 starting_params[1], # {3} - def_trans_in_p
-                starting_params[2], # {4} - def_trans_out_p
-                starting_params[3], # {5} - def_emit_same_p
-                starting_params[4], # {6} - def_emit_other_p
-                starting_params[5], # {7} - final trans_p
-                starting_params[6] # {8} - final emit_p
+                starting_params[2], # {4} - def_emit_same_p
+                starting_params[3], # {5} - final trans_p
+                starting_params[4] # {6} - final emit_p
             )
 
-    filename_out = WORKING_DIR + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
+    filename_out = working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
                     '.txt'
     if not isfile(filename_out):
-        line = 'Datetime\tStart_len\tFinal_len\t%_diff\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t%_Unknown\t' + \
-               'Run_count\tTotal_run_time(s)\tUse_recomb_rates\tStart_trans_in\tStart_trans_out\tStart_emit_same\t' + \
-               'Start_emit_other\tFinal_trans_p\tFinal_emit_p\n' + line
+        line = 'Datetime\tStart_len\tFinal_len\t%_diff\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t' + \
+               '%_Unknown\tRun_count\tTotal_run_time(s)\tUse_recomb_rates\tStart_trans_in\tStart_emit_same\t' + \
+               'Final_trans_p\tFinal_emit_p\n' + line
 
     with open(filename_out, 'a') as f:
         f.write(line)

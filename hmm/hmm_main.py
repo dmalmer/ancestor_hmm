@@ -26,6 +26,7 @@ def read_arguments():
     args.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', default=50)
 
     args.add_argument('-r', '--use-recomb-rates', help='Use recombination rates', default=True)
+    args.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel', default=False)
     args.add_argument('-s', '--use-snp-dist', help='Use SNP distance', default=False)
     args.add_argument('-h', '--use-hotspots', help='Use hotspots', default=False)
     args.add_argument('-f', '--hotspot-fi', help='Fold increase per hotspot', default=40)
@@ -171,9 +172,10 @@ if __name__ == "__main__":
     emit_p = {s: {s: log(args.emit_same_p), '~'+s: log(1 - args.emit_same_p)} for s in STATES}
 
     # Set up parallel python server for viterbi function
-    job_server = pp.Server()
-    vit_func = pp.Template(job_server, viterbi, depfuncs=(count_hotspots, calc_recomb_rate, log_add_pair),
-                           modules=('from numpy import zeros', 'from math import e, log'))
+    if args.parallel:
+        job_server = pp.Server()
+        vit_func = pp.Template(job_server, viterbi, depfuncs=(count_hotspots, calc_recomb_rate, log_add_pair),
+                               modules=('from numpy import zeros', 'from math import e, log'))
 
     # Run algorithms
     tot_prob_dist = 10.
@@ -184,24 +186,28 @@ if __name__ == "__main__":
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
-        jobs = []
-        for curr_chr, SNPs in SNPs_by_chr.items():
-            # Run viterbi to find maximum likelihood path
-            job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi,
-                                                        hotspot_dict, recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS,
-                                                        args.use_hotspots, args.use_snp_dist, args.use_recomb_rates,
-                                                        args.verbose)
-            jobs.append((curr_chr, job))
-
         ancestors_by_chr = {}
-        for curr_chr, job in jobs:
-            ancestors_by_chr[curr_chr] = job()
+        if args.parallel:
+            jobs = []
+            for curr_chr, SNPs in SNPs_by_chr.items():
+                # Run viterbi to find maximum likelihood path
+                job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi, hotspot_dict,
+                                      recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS, args.use_hotspots,
+                                      args.use_snp_dist, args.use_recomb_rates, args.verbose)
+                jobs.append((curr_chr, job))
 
-        print 'before wait:'
-        print job_server.print_stats()
-        job_server.wait()
-        print 'after wait:'
-        print job_server.print_stats()
+            for curr_chr, job in jobs:
+                ancestors_by_chr[curr_chr] = job()
+            job_server.wait()
+
+            if args.verbose:
+                print job_server.print_stats()
+        else:
+            for curr_chr, SNPs in SNPs_by_chr.items():
+                ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi,
+                                                     hotspot_dict, recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS,
+                                                     args.use_hotspots, args.use_snp_dist, args.use_recomb_rates,
+                                                     args.verbose)
 
         # Label segments where SNP counts for multiple ancestors are identical
         ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain)

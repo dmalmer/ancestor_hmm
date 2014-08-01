@@ -27,7 +27,7 @@ def calc_new_trans_p(ancestors_by_chr, states):
     return new_trans_p
 
 
-def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_group, def_emit_same_p, def_emit_other_p):
+def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, def_emit_same_p, def_emit_other_p):
     # SNP_counts[<state>] = total number of <state> appearances
     # SNP_counts[<~state>] = total number of <~state> appearances
     SNP_counts = defaultdict(int)
@@ -41,7 +41,7 @@ def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_group, def_emit
             for s in states:
                 SNP_key = s
                 if s == 'Unk':
-                    if SNPs_by_chr[curr_chr][i][3] != input_group:
+                    if SNPs_by_chr[curr_chr][i][3] != input_strain:
                         SNP_key = '~' + s
                 elif s not in SNPs_by_chr[curr_chr][i][3].split('_'):
                     SNP_key = '~' + s
@@ -87,7 +87,7 @@ def calc_confidence_intervals(ancestors, SNPs, prob_nodes):
     return confidence_intervals
 
 
-def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_group):
+def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain):
 
     new_ancestors_by_chr = {}
     for curr_chr in ancestors_by_chr.keys():
@@ -97,7 +97,7 @@ def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_group):
                                                                                       return_SNPs=True):
             SNP_counts = defaultdict(int)
             for SNP in SNPs_section:
-                if SNP[3] == input_group:
+                if SNP[3] == input_strain:
                     SNP_counts['Unk'] += 1
                 else:
                     for anc in SNP[3].split('_')[1:]:

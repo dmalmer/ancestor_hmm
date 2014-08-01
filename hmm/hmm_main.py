@@ -22,7 +22,7 @@ except KeyError:
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot=None, hotspot_dict=None,
+def viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_strain, fi_per_hotspot=None, hotspot_dict=None,
             recomb_rate_dict=None, effective_pop=None, num_generations=None, use_hotspots=False, use_SNP_dist=False,
             use_recomb_rates=False, verbose=False):
     # Create a separate path for each chromosome
@@ -39,7 +39,7 @@ def viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_h
             # For each state, the emission probability is either emit_p[state] or emit_p[~state]
             emit_key = s
             if s == 'Unk':
-                if SNPs[0][3] != input_group:
+                if SNPs[0][3] != input_strain:
                     emit_key = '~' + s
             elif s not in SNPs[0][3].split('_'):
                 emit_key = '~' + s
@@ -73,7 +73,7 @@ def viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_h
                 # For each state, the emission probability is either emit_p[state] or emit_p[~state]
                 emit_key = curr_state
                 if curr_state == 'Unk':
-                    if SNPs[i][3] != input_group:
+                    if SNPs[i][3] != input_strain:
                         emit_key = '~' + curr_state
                 elif curr_state not in SNPs[i][3].split('_'):
                     emit_key = '~' + curr_state
@@ -128,7 +128,7 @@ if __name__ == "__main__":
     time_start = time()
 
     # Input/output names
-    input_group = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if \
+    input_strain = sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] if \
         sys.argv[1].strip().rsplit('/',1)[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
     unique_output_name = ''
 
@@ -177,18 +177,18 @@ if __name__ == "__main__":
         sys.stdout.flush()
 
         # Run viterbi to find maximum likelihood path
-        ancestors_by_chr = viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_group, fi_per_hotspot, hotspot_dict,
+        ancestors_by_chr = viterbi(SNPs_by_chr, states, start_p, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot_dict,
                                         recomb_rate_dict, effective_pop, num_generations, use_hotspots, use_SNP_dist,
                                         use_recomb_rates, verbose)
 
         # Label segments where SNP counts for multiple ancestors are identical
-        ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_group)
+        ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain)
 
         # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
 
-        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_group, def_emit_same_p, def_emit_other_p)
+        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, def_emit_same_p, def_emit_other_p)
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
 
         if verbose:

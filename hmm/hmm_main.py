@@ -1,10 +1,10 @@
 
 import argparse
+import pp
 import sys
 
-from dispy import JobCluster
 from math import log
-from numpy import loadtxt, zeros
+from numpy import zeros
 from os import environ
 from time import time
 
@@ -42,14 +42,11 @@ def read_arguments():
 #-------------------
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
             effective_pop, num_generations, use_hotspots, use_SNP_dist, use_recomb_rates, verbose):
-    print 'VITERBI'
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
-    print 'zeros'
     ancestors_by_state = {}
     recomb_index = None # Initially set to None so calc_recomb_rate uses a special case when called for the first time
 
-    print 'before states'
     # Start probabilities
     for s in states:
         # For each state, the emission probability is either emit_p[state] or emit_p[~state]
@@ -64,13 +61,10 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot
         ancestors_by_state[s] = [s]
 
     # Rest of probabilities
-    print 'before for loop'
     for i in range(1, len(SNPs)):
         if verbose and i % 1000 == 0:
             print 'i = ' + str(i)
         new_ancestors_by_state = {}
-
-        print i
 
         # Use of additional data flags
         hotspots_count = 0
@@ -133,8 +127,6 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot
 
     # Find maximum-likelihood ancestors for the current chromosome
     (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
-    print 'returning:'
-    print ancestors_by_state[best_state]
     return ancestors_by_state[best_state]
 
 #-------------
@@ -178,13 +170,15 @@ if __name__ == "__main__":
                          for s_inner in STATES} for s_outer in STATES}
     emit_p = {s: {s: log(args.emit_same_p), '~'+s: log(1 - args.emit_same_p)} for s in STATES}
 
-    # Set up cluster
-    cluster = JobCluster(viterbi, depends=[zeros, count_hotspots, calc_recomb_rate, log_add_pair])
+    # Set up parallel python server for viterbi function
+    job_server = pp.Server()
+    vit_func = pp.Template(job_server, viterbi, depfuncs=(count_hotspots, calc_recomb_rate, log_add_pair),
+                           modules=('from numpy import zeros', 'from math import e, log'))
 
     # Run algorithms
     tot_prob_dist = 10.
     run_count = 0
-    while tot_prob_dist > 0.01 and run_count < args.max_iter:
+    while tot_prob_dist > 0.01 and run_count < int(args.max_iter):
         tot_prob_dist = 0.
 
         print '---- Run %i ----' % run_count
@@ -192,26 +186,24 @@ if __name__ == "__main__":
 
         jobs = []
         for curr_chr, SNPs in SNPs_by_chr.items():
-            print curr_chr
             # Run viterbi to find maximum likelihood path
-            job = cluster.submit(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi,
+            job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi,
                                                         hotspot_dict, recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS,
                                                         args.use_hotspots, args.use_snp_dist, args.use_recomb_rates,
                                                         args.verbose)
-            jobs.append(job)
+            jobs.append((curr_chr, job))
 
-        print jobs
-        cluster.wait()
-        for job in jobs:
-            test = job() # waits for job to finish and returns results
-            print job.stdout
-            print job.stderr
-            print job.exception
-            print 'test = ' + str(test)
-        cluster.stats()
+        ancestors_by_chr = {}
+        for curr_chr, job in jobs:
+            ancestors_by_chr[curr_chr] = job()
+
+        print 'before wait:'
+        print job_server.print_stats()
+        job_server.wait()
+        print 'after wait:'
+        print job_server.print_stats()
 
         # Label segments where SNP counts for multiple ancestors are identical
-        ancestors_by_chr = {}
         ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain)
 
         # Recalculate transition and emission probabilities

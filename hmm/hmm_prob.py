@@ -103,11 +103,7 @@ def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_group):
                     for anc in SNP[3].split('_')[1:]:
                         SNP_counts[anc] += 1
 
-            indent_ancestors = [k for k,v in SNP_counts.items() if v == max(SNP_counts.values())]
-
-            # quick sanity check
-            if ancestor not in indent_ancestors:
-                raise Exception('Classified ancestor not in maximum SNP count???')
+            indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor]]
 
             new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
 

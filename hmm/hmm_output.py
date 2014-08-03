@@ -35,14 +35,6 @@ def write_confidence_interval(working_dir, filename_in, unique_output_name, conf
         out_file.write('%s\t%f\n' % (pos_start, conf))
 
 
-def write_indentical_by_ancestor(working_dir, filename_in, unique_output_name, identical_by_anc):
-    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_IBA' + unique_output_name +
-                    '.bed', 'w')
-
-    for chromosome, pos_start, pos_end, iba in identical_by_anc:
-        out_file.write('%s\t%s\t%s\t%s\n' % (chromosome, pos_start, pos_end, iba))
-
-
 def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params,
                      run_count, tot_run_time):
     len_before = 0

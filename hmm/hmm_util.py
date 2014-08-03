@@ -65,21 +65,6 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_po
     return max(expected_recombs, .0000000001), recomb_main_i
 
 
-# Count the number of hotspots between two chromosome positions
-def count_hotspots(chromosome, pos_start, pos_end, hotspot_dict):
-    # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
-    i_start = len(hotspot_dict[chromosome][pos_start-hotspot_dict[chromosome] > 0]) - 1
-    i_end = len(hotspot_dict[chromosome][pos_end-hotspot_dict[chromosome] > 0]) - 1
-
-    hs_count = ceil((i_end-i_start)/2.)
-
-    # if both the start and end indexes are on hotspots, we need to add 1 more to the count
-    if i_start % 2 == 1 and i_end % 2 == 1:
-        hs_count += 1
-
-    return hs_count
-
-
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
 def log_add_pair(log_A, log_B):
@@ -102,25 +87,6 @@ def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return izip(a, b)
-
-
-# Read in hotspot data
-def read_hotspots_data(filename):
-    # defaultdict list that begins with a 0 element rather than starting empty
-    # All even indexes are the pos start of cold (not hot) spots, all odd indexes are the pos start of hot spots
-    hotspot_dict = defaultdict(lambda: [0])
-    with open(filename, 'r') as f:
-        f.readline()
-        line = f.readline()
-        while line != '':
-            splits = line.split(',')
-            hotspot_dict['chr'+str(splits[0])].extend([int(splits[1]), int(splits[2])+1])
-            line = f.readline()
-    # Convert to numpy arrays
-    for k, v in hotspot_dict.items():
-        hotspot_dict[k] = array(v)
-
-    return hotspot_dict
 
 
 # Read in recombination rates data

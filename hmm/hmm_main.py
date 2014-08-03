@@ -8,11 +8,9 @@ from numpy import zeros
 from os import environ
 from time import time
 
-from hmm_output import write_ancestors_to_file, write_confidence_interval, \
-                       write_indentical_by_ancestor, write_statistics
+from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
 from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, label_identical_ancestors, prob_dist
-from hmm_util import calc_recomb_rate, count_hotspots, log_add_pair, read_hotspots_data, read_recomb_rates_data, \
-                     read_SNP_data
+from hmm_util import calc_recomb_rate, log_add_pair, read_recomb_rates_data, read_SNP_data
 
 #-----------
 # Arguments
@@ -23,13 +21,10 @@ def read_arguments():
 
     args.add_argument('-t', '--trans-in-p', help='Starting trans-in probability', default=.94)
     args.add_argument('-e', '--emit-same-p', help='Starting emit-same probability', default=.99)
-    args.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', default=50)
-
     args.add_argument('-r', '--use-recomb-rates', help='Use recombination rates', default=True)
+
+    args.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', default=50)
     args.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel', default=False)
-    args.add_argument('-s', '--use-snp-dist', help='Use SNP distance', default=False)
-    args.add_argument('-h', '--use-hotspots', help='Use hotspots', default=False)
-    args.add_argument('-f', '--hotspot-fi', help='Fold increase per hotspot', default=40)
 
     args.add_argument('-d', '--append-date', help='Append date to output filename', default=True)
     args.add_argument('-o', '--append-str', help='Append string to output filename', default='')
@@ -41,8 +36,8 @@ def read_arguments():
 #-------------------
 # Viterbi algorithm
 #-------------------
-def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot_dict, recomb_rate_dict,
-            effective_pop, num_generations, use_hotspots, use_SNP_dist, use_recomb_rates, verbose):
+def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
+            use_recomb_rates, verbose):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -67,15 +62,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot
             print 'i = ' + str(i)
         new_ancestors_by_state = {}
 
-        # Use of additional data flags
-        hotspots_count = 0
-        if use_hotspots:
-            hotspots_count = count_hotspots(SNPs[i][0], int(SNPs[i-1][1]), int(SNPs[i][1]), hotspot_dict)
-
-        SNP_dist = 1
-        if use_SNP_dist:
-            SNP_dist = max((int(SNPs[i][1]) - int(SNPs[i-1][1])) / 100, 1)
-
+        # Calculate recombination rate
         expected_recombs = 1.
         if use_recomb_rates and len(recomb_rate_dict[SNPs[i][0]]) > 0:
             expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
@@ -96,23 +83,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, fi_per_hotspot, hotspot
             #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
             state_probabilities = []
             for prev_state in states:
-                curr_hotspot_fi = 1
-                if prev_state == curr_state:
-                    curr_trans_p = trans_p[prev_state][curr_state] * SNP_dist
-                else:
-                    curr_trans_p = 0.
-                    for j in range(1,SNP_dist):
-                        # hopefully I can eventually remove this check to speed things up (should always be true)
-                        if curr_trans_p < trans_p[prev_state][prev_state]*j:
-                            raise Exception('log_add: curr_trans_p < trans_p[prev_state][prev_state]*j, need to add check')
-                        curr_trans_p = log_add_pair(curr_trans_p, trans_p[prev_state][prev_state]*j)
-                    curr_trans_p += trans_p[prev_state][curr_state]
-
-                    # Only apply hotspot fold increase to transition probabilities from one state to a different state
-                    curr_hotspot_fi = max(fi_per_hotspot * hotspots_count, 1)
-
-                # Calculate probabilities
-                state_probabilities.append((prob_nodes[i-1][prev_state] + curr_trans_p + log(curr_hotspot_fi) +
+                state_probabilities.append((prob_nodes[i-1][prev_state] + trans_p[prev_state][curr_state] +
                                             emit_p[curr_state][emit_key], prev_state))
 
             (recomb_prob, orig_prob, prev_state) = max([(prob + log(expected_recombs), prob, prev_s)
@@ -159,9 +130,6 @@ if __name__ == "__main__":
 
     # Read in data
     SNPs_by_chr = read_SNP_data(args.input_file)
-    hotspot_dict = {}
-    if args.use_hotspots:
-        hotspot_dict = read_hotspots_data(WORKING_DIR + 'data/mouse_hotspots.csv')
     recomb_rate_dict = {}
     if args.use_recomb_rates:
         recomb_rate_dict = read_recomb_rates_data(WORKING_DIR + 'data/mouse_recomb_rates.csv')
@@ -174,7 +142,7 @@ if __name__ == "__main__":
     # Set up parallel python server for viterbi function
     if args.parallel:
         job_server = pp.Server()
-        vit_func = pp.Template(job_server, viterbi, depfuncs=(count_hotspots, calc_recomb_rate, log_add_pair),
+        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, log_add_pair),
                                modules=('from numpy import zeros', 'from math import e, log'))
 
     # Run algorithms
@@ -191,9 +159,8 @@ if __name__ == "__main__":
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
                 # Run viterbi to find maximum likelihood path
-                job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi, hotspot_dict,
-                                      recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS, args.use_hotspots,
-                                      args.use_snp_dist, args.use_recomb_rates, args.verbose)
+                job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
+                                      NUM_GENERATIONS, args.use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
 
             for curr_chr, job in jobs:
@@ -204,9 +171,8 @@ if __name__ == "__main__":
                 print job_server.print_stats()
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
-                ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, args.hotspot_fi,
-                                                     hotspot_dict, recomb_rate_dict, EFFECTIVE_POP, NUM_GENERATIONS,
-                                                     args.use_hotspots, args.use_snp_dist, args.use_recomb_rates,
+                ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict,
+                                                     EFFECTIVE_POP, NUM_GENERATIONS, args.use_recomb_rates,
                                                      args.verbose)
 
         # Label segments where SNP counts for multiple ancestors are identical
@@ -242,7 +208,6 @@ if __name__ == "__main__":
 
     filename_in = args.input_file.rsplit('/', 1)[1]
 
-    #write_indentical_by_ancestor(WORKING_DIR, filename_in, unique_output_name, identical_by_anc)
     #write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals)
 
     write_ancestors_to_file(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)

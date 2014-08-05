@@ -16,21 +16,23 @@ from hmm_util import calc_recomb_rate, log_add_pair, read_recomb_rates_data, rea
 # Arguments
 #-----------
 def read_arguments():
-    args = argparse.ArgumentParser(add_help=False)
-    args.add_argument('-i', '--input-file', help='Input SNP data file', required=True)
+    parser = argparse.ArgumentParser(add_help=False)
+    parser.add_argument('-i', '--input-file', help='Input SNP data file', type=str, required=True)
 
-    args.add_argument('-t', '--trans-in-p', help='Starting trans-in probability', default=.94)
-    args.add_argument('-e', '--emit-same-p', help='Starting emit-same probability', default=.99)
-    args.add_argument('-r', '--use-recomb-rates', help='Use recombination rates', default=True)
+    parser.add_argument('-t', '--trans-in-p', help='Starting trans-in probability', type=float, default=.94)
+    parser.add_argument('-e', '--emit-same-p', help='Starting emit-same probability', type=float, default=.99)
+    parser.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', type=int, default=50)
 
-    args.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', default=50)
-    args.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel', default=False)
+    parser.add_argument('-r', '--use-recomb-rates', help='Incorporate recombination rates as priors for transition '
+                                                         'probabilities', action='store_true')
+    parser.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel',
+                        action='store_true')
 
-    args.add_argument('-d', '--append-date', help='Append date to output filename', default=True)
-    args.add_argument('-o', '--append-str', help='Append string to output filename', default='')
-    args.add_argument('-v', '--verbose', help='Verbose', default=False)
+    parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
+    parser.add_argument('-o', '--append-str', help='Append string to output filename', type=str, default='')
+    parser.add_argument('-v', '--verbose', help='Verbose', action='store_true')
 
-    return args.parse_args()
+    return parser.parse_args()
 
 
 #-------------------

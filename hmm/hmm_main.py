@@ -9,12 +9,12 @@ from os import environ
 from time import time
 
 from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
-from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, label_identical_ancestors, prob_dist
-from hmm_util import calc_recomb_rate, log_add_pair, read_recomb_rates_data, read_SNP_data
+from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, \
+                     label_identical_ancestors, prob_dist
+from hmm_util import log_add_pair, read_recomb_rates, read_SNPs
 
-#-----------
+
 # Arguments
-#-----------
 def read_arguments():
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument('-i', '--input-file', help='Input SNP data file', type=str, required=True)
@@ -35,15 +35,13 @@ def read_arguments():
     return parser.parse_args()
 
 
-#-------------------
 # Viterbi algorithm
-#-------------------
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
             use_recomb_rates, verbose):
     # Initialize
     prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
-    recomb_index = None # Initially set to None so calc_recomb_rate uses a special case when called for the first time
+    recomb_index = None  # Initially set to None so calc_recomb_rate uses a special case when called for the first time
 
     # Start probabilities
     for s in states:
@@ -103,9 +101,8 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
     (prob, best_state) = max((prob_nodes[len(SNPs)-1][s], s) for s in states)
     return ancestors_by_state[best_state]
 
-#-------------
+
 # Main method
-#-------------
 if __name__ == "__main__":
     # Start timer
     time_start = time()
@@ -124,6 +121,8 @@ if __name__ == "__main__":
 
     EFFECTIVE_POP = 1  # effective population (N_e) for recombination rate calculations
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
+    MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
+    PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
 
     # Read in arguments
     args = read_arguments()
@@ -131,13 +130,13 @@ if __name__ == "__main__":
                    if args.input_file.strip().rsplit('/',1)[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
 
     # Read in data
-    SNPs_by_chr = read_SNP_data(args.input_file)
+    SNPs_by_chr = read_SNPs(args.input_file)
     recomb_rate_dict = {}
     if args.use_recomb_rates:
-        recomb_rate_dict = read_recomb_rates_data(WORKING_DIR + 'data/mouse_recomb_rates.csv')
+        recomb_rate_dict = read_recomb_rates(WORKING_DIR + 'data/mouse_recomb_rates.csv')
 
     # Start, transition, and emission probabilities
-    trans_p = {s_outer: {s_inner: log(args.trans_in_p) if s_inner == s_outer else log((1 - args.trans_in_p) / 6) \
+    trans_p = {s_outer: {s_inner: log(args.trans_in_p) if s_inner == s_outer else log((1 - args.trans_in_p) / 6)
                          for s_inner in STATES} for s_outer in STATES}
     emit_p = {s: {s: log(args.emit_same_p), '~'+s: log(1 - args.emit_same_p)} for s in STATES}
 
@@ -147,20 +146,20 @@ if __name__ == "__main__":
         vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, log_add_pair),
                                modules=('from numpy import zeros', 'from math import e, log'))
 
-    # Run algorithms
+    # Expectation-Maximization loop
     tot_prob_dist = 10.
     run_count = 0
-    while tot_prob_dist > 0.01 and run_count < int(args.max_iter):
+    while tot_prob_dist > PROB_DIST_CUTOFF and run_count < int(args.max_iter):
         tot_prob_dist = 0.
 
         print '---- Run %i ----' % run_count
         sys.stdout.flush()
 
+        # Run viterbi to find maximum likelihood path
         ancestors_by_chr = {}
         if args.parallel:
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
-                # Run viterbi to find maximum likelihood path
                 job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
                                       NUM_GENERATIONS, args.use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
@@ -208,6 +207,7 @@ if __name__ == "__main__":
     print 'Total time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
 
+    # Output results
     filename_in = args.input_file.rsplit('/', 1)[1]
 
     #write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals)

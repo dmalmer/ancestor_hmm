@@ -1,17 +1,18 @@
 
 import argparse
+import math
+import numpy
 import pp
 import sys
 
 from math import log
-from numpy import zeros
 from os import environ
 from time import time
 
 from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
 from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, \
                      label_identical_ancestors, prob_dist
-from hmm_util import log_add_pair, read_recomb_rates, read_SNPs
+from hmm_util import read_recomb_rates, read_SNPs
 
 
 # Arguments
@@ -39,7 +40,7 @@ def read_arguments():
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
             use_recomb_rates, verbose):
     # Initialize
-    prob_nodes = zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
+    prob_nodes = numpy.zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
     recomb_index = None  # Initially set to None so calc_recomb_rate uses a special case when called for the first time
 
@@ -86,7 +87,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
                 state_probabilities.append((prob_nodes[i-1][prev_state] + trans_p[prev_state][curr_state] +
                                             emit_p[curr_state][emit_key], prev_state))
 
-            (recomb_prob, orig_prob, prev_state) = max([(prob + log(expected_recombs), prob, prev_s)
+            (recomb_prob, orig_prob, prev_state) = max([(prob + math.log(expected_recombs), prob, prev_s)
                                                         if curr_state != prev_s else (prob, prob, prev_s)
                                                         for prob, prev_s in state_probabilities])
 
@@ -143,8 +144,7 @@ if __name__ == "__main__":
     # Set up parallel python server for viterbi function
     if args.parallel:
         job_server = pp.Server()
-        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, log_add_pair),
-                               modules=('from numpy import zeros', 'from math import e, log'))
+        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate,), modules=('numpy', 'math'))
 
     # Expectation-Maximization loop
     tot_prob_dist = 10.

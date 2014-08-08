@@ -61,6 +61,11 @@ ils_i()
 	qsub -v STRAIN=ILS,CHR=_chrY -N hmm_ILS_Y ../run_hmm.sh
 }
 
+test_run()
+{
+	qsub -v STRAIN=TEST,CHR= -N hmm_TEST ../run_hmm.sh
+}
+
 if [[ $1 == "ALL_C" ]]
 then
 	iss_c
@@ -81,4 +86,7 @@ then
 elif [[ $1 == "ILS_I" ]]
 then
 	ils_i
+elif [[ $1 == "TEST" ]]
+then
+    test_run
 fi

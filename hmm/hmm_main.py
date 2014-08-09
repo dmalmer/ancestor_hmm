@@ -11,7 +11,7 @@ from time import time
 
 from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
 from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, \
-                     label_identical_ancestors, prob_dist
+                     reclassify_ibd_and_unk, prob_dist
 from hmm_util import read_recomb_rates, read_SNPs
 
 
@@ -124,6 +124,7 @@ if __name__ == "__main__":
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
+    UNK_CUTOFF = .6
 
     # Read in arguments
     args = read_arguments()
@@ -169,15 +170,16 @@ if __name__ == "__main__":
             job_server.wait()
 
             if args.verbose:
-                print job_server.print_stats()
+                job_server.print_stats()
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
                 ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict,
                                                      EFFECTIVE_POP, NUM_GENERATIONS, args.use_recomb_rates,
                                                      args.verbose)
 
-        # Label segments where SNP counts for multiple ancestors are identical
-        ancestors_by_chr = label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain)
+        # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
+        #  ancestors are identical
+        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, UNK_CUTOFF)
 
         # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, STATES)

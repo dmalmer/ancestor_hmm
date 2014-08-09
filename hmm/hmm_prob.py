@@ -142,10 +142,26 @@ def calc_recomb_rate(SNP_start, SNP_end, recomb_main_i, recomb_map, effective_po
     return max(expected_recombs, .00000001), recomb_main_i
 
 
-# Find and label all haplotype blocks that are identical by descent
-def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain):
+# Calculate the distance between old and new transition or emission rates
+def prob_dist(old_probs, new_probs):
+    # Probability distance = abs(log-space prob of old t/e rate - log-space prob of new t/e rate)
+    tot_dist = 0.
+    tot_probs = 0
+    for key in old_probs.keys():
+        for old_p, new_p in izip(old_probs[key].values(), new_probs[key].values()):
+            tot_dist += abs(old_p - new_p)
+            tot_probs += 1
+
+    # Return average prob dist
+    return tot_dist / tot_probs
+
+
+# Reclassify all haplotype blocks that are identical by descent or likely from one of the two unknown strains
+def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cutoff):
     # An ancestor is IBD to the classified ancestor if it has as many or more SNPs in a haplotype block
     #  as the classified ancestor
+    # Alternatively, a haplotype block is likely from one of the unsequenced ancestors if a high percentage of SNPs are
+    #  labeled ILS or ISS
     new_ancestors_by_chr = {}
     for curr_chr in ancestors_by_chr.keys():
         new_ancestors = []
@@ -161,27 +177,18 @@ def label_identical_ancestors(ancestors_by_chr, SNPs_by_chr, input_strain):
                     for anc in SNP[3].split('_')[1:]:
                         SNP_counts[anc] += 1
 
-            # Find all other ancestors with counts >=  the classified ancestor count
-            indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor]]
+            # First, check if haplotype block comes from an unsequenced ancestor
+            if int(SNP_counts['Unk']) > 2 and SNP_counts['Unk'] >= unk_cutoff * SNP_counts[ancestor]:
+                new_ancestors.extend(['Unk'] * len(SNPs_section))
 
-            # Add all IBD ancestors to back of classified ancestor
-            new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
+            # If not, check if classified ancestor is IBD
+            else:
+                # Find all other ancestors with counts >= the classified ancestor count
+                indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor]]
+
+                # Add all IBD ancestors to back of classified ancestor
+                new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
 
         new_ancestors_by_chr[curr_chr] = new_ancestors
 
     return new_ancestors_by_chr
-
-
-# Calculate the distance between old and new transition or emission rates
-def prob_dist(old_probs, new_probs):
-    # Probability distance = abs(log-space prob of old t/e rate - log-space prob of new t/e rate)
-    tot_dist = 0.
-    tot_probs = 0
-    for key in old_probs.keys():
-        for old_p, new_p in izip(old_probs[key].values(), new_probs[key].values()):
-            tot_dist += abs(old_p - new_p)
-            tot_probs += 1
-
-    # Return average prob dist
-    return tot_dist / tot_probs
-

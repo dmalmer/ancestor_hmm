@@ -12,7 +12,7 @@ from time import time
 from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
 from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, \
                      reclassify_ibd_and_unk, prob_dist
-from hmm_util import read_recomb_rates, read_SNPs
+from hmm_util import prob_tuples, read_recomb_rates, read_SNPs
 
 
 # Arguments
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
-    UNK_CUTOFF = .6
+    UNK_CUTOFF = 1
 
     # Read in arguments
     args = read_arguments()
@@ -190,12 +190,24 @@ if __name__ == "__main__":
 
         if args.verbose:
             print 'Transition probabilities'
-            print '  Before: ' + str(trans_p)
-            print '  After:  ' + str(new_trans_p)
+            print '  Before:'
+            tuples_dict = prob_tuples(trans_p)
+            for s in STATES:
+                print '    %s -> %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f' % tuples_dict[s]
+            print '  After:'
+            tuples_dict = prob_tuples(new_trans_p)
+            for s in STATES:
+                print '    %s -> %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f' % tuples_dict[s]
 
             print 'Emission probabilities'
-            print '  Before: ' + str(emit_p)
-            print '  After:  ' + str(new_emit_p)
+            print '  Before:'
+            tuples_dict = prob_tuples(emit_p)
+            for s in STATES:
+                print '    %s -> %s: %.2f, %s: %.2f' % tuples_dict[s]
+            print '  After:'
+            tuples_dict = prob_tuples(new_emit_p)
+            for s in STATES:
+                print '    %s -> %s: %.2f, %s: %.2f' % tuples_dict[s]
 
             print 'Total probability distance: %.3f' % tot_prob_dist
 

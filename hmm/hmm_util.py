@@ -45,6 +45,18 @@ def pairwise(iterable):
     return izip(a, b)
 
 
+# Return dictionary of probability tuples to be used in print statements
+def prob_tuples(probs):
+    ret_dict = {}
+    for s in probs.keys():
+        prob_list = [s]
+        for k, v in probs[s].items():
+            prob_list.extend([k, e ** v])
+        ret_dict[s] = tuple(prob_list)
+
+    return ret_dict
+
+
 # Read in recombination rates data
 def read_recomb_rates(filename):
     # Divide recombination rate data into dictionary by chromosome

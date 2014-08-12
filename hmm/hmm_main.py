@@ -38,7 +38,7 @@ def read_arguments():
 
 # Viterbi algorithm
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
-            use_recomb_rates, verbose):
+            recomb_adjustment, use_recomb_rates, verbose):
     # Initialize
     prob_nodes = numpy.zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -59,8 +59,8 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
 
     # Rest of probabilities
     for i in range(1, len(SNPs)):
-        if verbose and i % 1000 == 0:
-            print 'i = ' + str(i)
+        #if verbose and i % 1000 == 0:
+        #    print 'i = ' + str(i)
         new_ancestors_by_state = {}
 
         # Calculate recombination rate
@@ -69,6 +69,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
             expected_recombs, recomb_index = calc_recomb_rate(int(SNPs[i-1][1]), int(SNPs[i][1]), recomb_index,
                                                               recomb_rate_dict[SNPs[i][0]], effective_pop,
                                                               num_generations)
+            expected_recombs *= recomb_adjustment
 
         # At every SNP, find probabilities for each state
         for curr_state in states:
@@ -124,7 +125,8 @@ if __name__ == "__main__":
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
-    UNK_CUTOFF = 1
+    UNK_CUTOFF = 1  # cutoff for relabeling an ancestor to Unk
+    RECOMB_ADJUSTMENT = .5  # multiplier to adjust expected number of recombinations
 
     # Read in arguments
     args = read_arguments()
@@ -162,7 +164,7 @@ if __name__ == "__main__":
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
                 job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
-                                      NUM_GENERATIONS, args.use_recomb_rates, args.verbose)
+                                      NUM_GENERATIONS, RECOMB_ADJUSTMENT, args.use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
 
             for curr_chr, job in jobs:
@@ -174,8 +176,8 @@ if __name__ == "__main__":
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
                 ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict,
-                                                     EFFECTIVE_POP, NUM_GENERATIONS, args.use_recomb_rates,
-                                                     args.verbose)
+                                                     EFFECTIVE_POP, NUM_GENERATIONS, RECOMB_ADJUSTMENT,
+                                                     args.use_recomb_rates, args.verbose)
 
         # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
         #  ancestors are identical

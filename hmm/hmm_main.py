@@ -28,6 +28,8 @@ def read_arguments():
                                                          'probabilities', action='store_true')
     parser.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel',
                         action='store_true')
+    parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations',
+                        type=float, default=1.)
 
     parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-o', '--append-str', help='Append string to output filename', type=str, default='')
@@ -126,7 +128,6 @@ if __name__ == "__main__":
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
     UNK_CUTOFF = 1  # cutoff for relabeling an ancestor to Unk
-    RECOMB_ADJUSTMENT = .5  # multiplier to adjust expected number of recombinations
 
     # Read in arguments
     args = read_arguments()
@@ -164,7 +165,7 @@ if __name__ == "__main__":
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
                 job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
-                                      NUM_GENERATIONS, RECOMB_ADJUSTMENT, args.use_recomb_rates, args.verbose)
+                                      NUM_GENERATIONS, args.adjust_recomb, args.use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
 
             for curr_chr, job in jobs:
@@ -176,7 +177,7 @@ if __name__ == "__main__":
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
                 ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict,
-                                                     EFFECTIVE_POP, NUM_GENERATIONS, RECOMB_ADJUSTMENT,
+                                                     EFFECTIVE_POP, NUM_GENERATIONS, args.adjust_recomb,
                                                      args.use_recomb_rates, args.verbose)
 
         # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple

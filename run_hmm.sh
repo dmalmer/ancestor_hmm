@@ -4,7 +4,7 @@
 
 #PBS -q long
 #PBS -l nodes=1
-#PBS -l mem=1gb
+#PBS -l mem=8gb
 
 #PBS -m ae
 #PBS -M daniel.malmer@colorado.edu

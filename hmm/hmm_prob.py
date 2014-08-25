@@ -155,9 +155,8 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
     new_ancestors_by_chr = {}
     for curr_chr in ancestors_by_chr.keys():
         new_ancestors = []
-        for chromosome, pos_start, pos_end, ancestor, SNPs_section in ancestor_blocks(ancestors_by_chr[curr_chr],
-                                                                                      SNPs_by_chr[curr_chr],
-                                                                                      return_SNPs=True):
+        for pos_start, pos_end, ancestor, SNPs_section in ancestor_blocks(ancestors_by_chr[curr_chr],
+                                                                          SNPs_by_chr[curr_chr], return_SNPs=True):
             # Count the number of SNPs from each ancestor
             SNP_counts = defaultdict(int)
             for SNP in SNPs_section:
@@ -195,8 +194,7 @@ def score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr, anc_ins_by_c
         ssv_ind = 0
         ins_ind = 0
         del_ind = 0
-        for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr],
-                                                                        SNPs_by_chr[curr_chr]):
+        for pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
             if ancestor == 'Unk':
                 continue
 

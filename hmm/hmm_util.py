@@ -15,9 +15,9 @@ def ancestor_blocks(ancestors, SNPs, return_SNPs=False):
             curr_i += 1
 
         if return_SNPs:
-            yield (SNPs[start_i, 0], SNPs[start_i, 1], SNPs[curr_i-1, 2], ancestors[start_i], SNPs[start_i:curr_i])
+            yield (SNPs[start_i, 1], SNPs[curr_i-1, 2], ancestors[start_i], SNPs[start_i:curr_i])
         else:
-            yield (SNPs[start_i, 0], SNPs[start_i, 1], SNPs[curr_i-1, 2], ancestors[start_i])
+            yield (SNPs[start_i, 1], SNPs[curr_i-1, 2], ancestors[start_i])
 
 
 # Find log(A+B) when A and B are in log-space

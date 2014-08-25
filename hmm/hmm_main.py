@@ -30,6 +30,8 @@ def read_arguments():
                         action='store_true')
     parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations',
                         type=float, default=1.)
+    parser.add_argument('-u', '--unk-cutoff', help='Cutoff for fraction of Unk SNPs required for an ancestor block to '
+                                                   'be relabeled as Unk', type=float, default=1.)
 
     parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-o', '--append-str', help='Append string to output filename', type=str, default='')
@@ -127,7 +129,6 @@ if __name__ == "__main__":
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
-    UNK_CUTOFF = 1  # cutoff for relabeling an ancestor to Unk
 
     # Read in arguments
     args = read_arguments()
@@ -182,7 +183,7 @@ if __name__ == "__main__":
 
         # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
         #  ancestors are identical
-        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, UNK_CUTOFF)
+        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, args.unk_cutoff)
 
         # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, STATES)

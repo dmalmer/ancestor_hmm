@@ -23,20 +23,6 @@ def write_ancestors_to_file(working_dir, filename_in, unique_output_name, ancest
     out_file.close()
 
 
-# Write confidence intervals of each classification to a .wig heatmap
-def write_confidence_interval(working_dir, filename_in, unique_output_name, confidence_intervals):
-    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_conf-int' + unique_output_name +
-                    '.wig', 'w')
-    out_file.write('track type=wiggle_0 graphType=line viewLimits=0:1\n')
-
-    cur_chrom = ''
-    for next_chrom, pos_start, conf in confidence_intervals:
-        if next_chrom != cur_chrom:
-            cur_chrom = next_chrom
-            out_file.write('variableStep chrom=%s\n' % cur_chrom)
-        out_file.write('%s\t%f\n' % (pos_start, conf))
-
-
 # Write statistics of each run out to a file
 def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params,
                      run_count, tot_run_time):

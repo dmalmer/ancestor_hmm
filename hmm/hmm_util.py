@@ -94,3 +94,49 @@ def read_SNPs(filename):
         SNPs_dict[k] = array(v)
 
     return SNPs_dict
+
+
+# Read in structural variant files
+def read_SVs(strain_SV_filename, anc_ins_filename, anc_del_filename):
+    # Divide SV data into dictionaries by chromosome
+    #  Read ISS or ILS SVs
+    strain_SVs_by_chr = defaultdict(list)
+    with open(strain_SV_filename, 'r') as f:
+        f.readline()
+        line = f.readline()
+        while line != '':
+            cols = line.split('\t')
+            strain_SVs_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
+
+            line = f.readline()
+
+    for SVs in strain_SVs_by_chr.values():
+        SVs.sort()
+
+    #  Read individual ancestor insertions
+    anc_ins_by_chr = defaultdict(list)
+    with open(anc_ins_filename, 'r') as f:
+        line = f.readline().strip()
+        while line != '':
+            cols = line.split('\t')
+            anc_ins_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
+
+            line = f.readline().strip()
+
+    for insertions in anc_ins_by_chr.values():
+        insertions.sort()
+
+    #  Read individual ancestor deletions
+    anc_del_by_chr = defaultdict(list)
+    with open(anc_del_filename, 'r') as f:
+        line = f.readline().strip()
+        while line != '':
+            cols = line.split('\t')
+            anc_del_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
+
+            line = f.readline().strip()
+
+    for deletions in anc_del_by_chr.values():
+        deletions.sort()
+
+    return (strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr)

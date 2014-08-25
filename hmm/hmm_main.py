@@ -9,10 +9,10 @@ from math import log
 from os import environ
 from time import time
 
-from hmm_output import write_ancestors_to_file, write_confidence_interval, write_statistics
-from hmm_prob import calc_confidence_intervals, calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, \
-                     reclassify_ibd_and_unk, prob_dist
-from hmm_util import prob_tuples, read_recomb_rates, read_SNPs
+from hmm_output import write_ancestors_to_file, write_statistics
+from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, \
+                     reclassify_ibd_and_unk, score_results
+from hmm_util import prob_tuples, read_recomb_rates, read_SNPs, read_SVs
 
 
 # Arguments
@@ -219,15 +219,22 @@ if __name__ == "__main__":
 
         run_count += 1
 
-    #confidence_intervals = calc_confidence_intervals(ancestors, SNPs)
+    # Score results
+    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain + '.ALL.merged.bed',
+                                                                 WORKING_DIR + 'data/ancestor_insertions.bed',
+                                                                 WORKING_DIR + 'data/ancestor_deletions.bed')
+    hits_by_chr, misses_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr, anc_ins_by_chr,
+                                               anc_del_by_chr)
 
-    print 'Total time (min): ' + str((time() - time_start)/60)
+    print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
+
+    print '\nFinal scores:'
+    for curr_chr in hits_by_chr.keys():
+        print ' %s - Hits: %i, Misses: %i' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr])
 
     # Output results
     filename_in = args.input_file.rsplit('/', 1)[1]
-
-    #write_confidence_interval(WORKING_DIR, filename_in, unique_output_name, confidence_intervals)
 
     write_ancestors_to_file(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
     write_statistics(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,

@@ -7,16 +7,6 @@ from numpy import mean
 from hmm_util import ancestor_blocks, log_add_list, pairwise
 
 
-# Calculate a confidence interval for each classified haplotype block
-def calc_confidence_intervals(ancestors, SNPs, prob_nodes):
-    confidence_intervals = []
-    for anc, SNP, p_node in zip(ancestors, SNPs, prob_nodes):
-        p_sum = log_add_list(list(p_node))
-        # (chromosome, start_pos, confidence)
-        confidence_intervals.append((SNP[0], SNP[1], e ** (p_node[anc] - p_sum)))
-    return confidence_intervals
-
-
 # Calculate new transition probabilities
 def calc_new_trans_p(ancestors_by_chr, states):
     # Count number of transitions from one state to another
@@ -192,3 +182,72 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
         new_ancestors_by_chr[curr_chr] = new_ancestors
 
     return new_ancestors_by_chr
+
+
+def score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr):
+    hits_by_chr = defaultdict(int)
+    misses_by_chr = defaultdict(int)
+
+    for curr_chr, ancestors in ancestors_by_chr.items():
+        strain_SVs = strain_SVs_by_chr[curr_chr]
+        anc_insertions = anc_ins_by_chr[curr_chr]
+        anc_deletions = anc_del_by_chr[curr_chr]
+        ssv_ind = 0
+        ins_ind = 0
+        del_ind = 0
+        for chromosome, pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr],
+                                                                        SNPs_by_chr[curr_chr]):
+            if ancestor == 'Unk':
+                continue
+
+            while ssv_ind < len(strain_SVs) and strain_SVs[ssv_ind][1] < int(pos_start):
+                ssv_ind += 1
+
+            if ssv_ind == len(strain_SVs):
+                break
+
+            while ssv_ind < len(strain_SVs) and strain_SVs[ssv_ind][0] < int(pos_end):
+                if strain_SVs[ssv_ind][2].split('_')[0] in ('INS', 'GAIN'):
+                    #print '\nfound INS --- ancestor: %s, anc pos: %s-%s, SV pos: %i-%i' % (ancestor, pos_start, pos_end, strain_SVs[ssv_ind][0], strain_SVs[ssv_ind][1])
+                    while ins_ind < len(anc_insertions) and (anc_insertions[ins_ind][1] < strain_SVs[ssv_ind][0] or
+                                                             anc_insertions[ins_ind][1] < int(pos_start)):
+                        ins_ind += 1
+                    while ins_ind < len(anc_insertions) and (anc_insertions[ins_ind][0] < strain_SVs[ssv_ind][1] and
+                                                             anc_insertions[ins_ind][0] < int(pos_end)):
+                        #print '   found anc ins: ' + str(anc_insertions[ins_ind])
+                        for anc in ancestor.split('_'):
+                            if anc in anc_insertions[ins_ind][2].split('_'):
+                                #print '     Hit!'
+                                hits_by_chr[curr_chr] += 1
+                            else:
+                                #print '     ...miss'
+                                misses_by_chr[curr_chr] += 1
+                        ins_ind += 1
+                elif strain_SVs[ssv_ind][2].split('_')[0] in ('DEL', 'LOSS'):
+                    #print '\nfound DEL --- ancestor: %s, anc pos: %s-%s, SV pos: %i-%i' % (ancestor, pos_start, pos_end, strain_SVs[ssv_ind][0], strain_SVs[ssv_ind][1])
+                    while del_ind < len(anc_deletions) and (anc_deletions[del_ind][1] < strain_SVs[ssv_ind][0] or
+                                                            anc_deletions[del_ind][1] < int(pos_start)):
+                        del_ind += 1
+                    while del_ind < len(anc_deletions) and (anc_deletions[del_ind][0] < strain_SVs[ssv_ind][1] and
+                                                            anc_deletions[del_ind][0] < int(pos_end)):
+                        #print '   found anc del: ' + str(anc_deletions[del_ind])
+                        for anc in ancestor.split('_'):
+                            if anc in anc_deletions[del_ind][2].split('_'):
+                                #print '     Hit!'
+                                hits_by_chr[curr_chr] += 1
+                            else:
+                                #print '     ...miss'
+                                misses_by_chr[curr_chr] += 1
+                        del_ind += 1
+                elif strain_SVs[ssv_ind][2].split('_')[0] in ('INV'):
+                    #print 'found INV --- anc pos: %s-%s, SV pos: %i-%i' % (pos_start, pos_end, strain_SVs[ssv_ind][0], strain_SVs[ssv_ind][1])
+                    pass
+                else:
+                    raise Exception('Found SV other than INS/GAIN, DEL/LOSS, or INV: %s' % strain_SVs[ssv_ind])
+
+                ssv_ind += 1
+
+    return hits_by_chr, misses_by_chr
+
+
+

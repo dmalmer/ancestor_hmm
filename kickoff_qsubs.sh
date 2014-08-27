@@ -3,14 +3,61 @@ cd output
 
 iss_c()
 {
-	qsub -v STRAIN=ISS,CHR= -N hmm_ISS_comp ../run_hmm.sh
+	qsub -v STRAIN=ISS -N hmm_ISS_comp ../run_hmm.sh
 }
 
 ils_c()
 {
-	qsub -v STRAIN=ILS,CHR= -N hmm_ILS_comp ../run_hmm.sh
+	qsub -v STRAIN=ILS -N hmm_ILS_comp ../run_hmm.sh
 }
 
+iss_a()
+{
+	qsub -v STRAIN=ISS,A="-a .8",U="-u .6",O="-o _a8u6" -N hmm_ISS_a8u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .8",U="-u .4",O="-o _a8u4" -N hmm_ISS_a8u4 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .8",U="-u .2",O="-o _a8u2" -N hmm_ISS_a8u2 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .8",U="-u .1",O="-o _a8u1" -N hmm_ISS_a8u1 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .6",U="-u .6",O="-o _a6u6" -N hmm_ISS_a6u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .6",U="-u .4",O="-o _a6u4" -N hmm_ISS_a6u4 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .6",U="-u .2",O="-o _a6u2" -N hmm_ISS_a6u2 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .6",U="-u .1",O="-o _a6u1" -N hmm_ISS_a6u1 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .4",U="-u .6",O="-o _a4u6" -N hmm_ISS_a4u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .4",U="-u .4",O="-o _a4u4" -N hmm_ISS_a4u4 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .4",U="-u .2",O="-o _a4u2" -N hmm_ISS_a4u2 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .4",U="-u .1",O="-o _a4u1" -N hmm_ISS_a4u1 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .2",U="-u .6",O="-o _a2u6" -N hmm_ISS_a2u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .2",U="-u .4",O="-o _a2u4" -N hmm_ISS_a2u4 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .2",U="-u .2",O="-o _a2u2" -N hmm_ISS_a2u2 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .2",U="-u .1",O="-o _a2u1" -N hmm_ISS_a2u1 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .1",U="-u .6",O="-o _a1u6" -N hmm_ISS_a1u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .1",U="-u .4",O="-o _a1u4" -N hmm_ISS_a1u4 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .1",U="-u .2",O="-o _a1u2" -N hmm_ISS_a1u2 ../run_hmm.sh
+	qsub -v STRAIN=ISS,A="-a .1",U="-u .1",O="-o _a1u1" -N hmm_ISS_a1u1 ../run_hmm.sh
+}
+
+ils_a()
+{
+	qsub -v STRAIN=ILS,A="-a .8",U="-u .6",O="-o _a8u6" -N hmm_ILS_a8u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .8",U="-u .4",O="-o _a8u4" -N hmm_ILS_a8u4 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .8",U="-u .2",O="-o _a8u2" -N hmm_ILS_a8u2 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .8",U="-u .1",O="-o _a8u1" -N hmm_ILS_a8u1 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .6",U="-u .6",O="-o _a6u6" -N hmm_ILS_a6u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .6",U="-u .4",O="-o _a6u4" -N hmm_ILS_a6u4 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .6",U="-u .2",O="-o _a6u2" -N hmm_ILS_a6u2 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .6",U="-u .1",O="-o _a6u1" -N hmm_ILS_a6u1 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .4",U="-u .6",O="-o _a4u6" -N hmm_ILS_a4u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .4",U="-u .4",O="-o _a4u4" -N hmm_ILS_a4u4 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .4",U="-u .2",O="-o _a4u2" -N hmm_ILS_a4u2 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .4",U="-u .1",O="-o _a4u1" -N hmm_ILS_a4u1 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .2",U="-u .6",O="-o _a2u6" -N hmm_ILS_a2u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .2",U="-u .4",O="-o _a2u4" -N hmm_ILS_a2u4 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .2",U="-u .2",O="-o _a2u2" -N hmm_ILS_a2u2 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .2",U="-u .1",O="-o _a2u1" -N hmm_ILS_a2u1 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .1",U="-u .6",O="-o _a1u6" -N hmm_ILS_a1u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .1",U="-u .4",O="-o _a1u4" -N hmm_ILS_a1u4 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .1",U="-u .2",O="-o _a1u2" -N hmm_ILS_a1u2 ../run_hmm.sh
+	qsub -v STRAIN=ILS,A="-a .1",U="-u .1",O="-o _a1u1" -N hmm_ILS_a1u1 ../run_hmm.sh
+}
 iss_i()
 {
 	qsub -v STRAIN=ISS,CHR=_chr1 -N hmm_ISS_1 ../run_hmm.sh
@@ -86,6 +133,16 @@ then
 elif [[ $1 == "ILS_I" ]]
 then
 	ils_i
+elif [[ $1 == "ALL_A" ]]
+then
+	iss_a
+	ils_a
+elif [[ $1 == "ISS_A" ]]
+then
+	iss_a
+elif [[ $1 == "ILS_A" ]]
+then
+	ils_a
 elif [[ $1 == "TEST" ]]
 then
     test_run

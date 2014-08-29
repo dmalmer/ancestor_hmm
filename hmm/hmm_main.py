@@ -221,18 +221,21 @@ if __name__ == "__main__":
         run_count += 1
 
     # Score results
-    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain + '.ALL.merged.bed',
+    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain + '_sv.bed',
                                                                  WORKING_DIR + 'data/ancestor_insertions.bed',
                                                                  WORKING_DIR + 'data/ancestor_deletions.bed')
-    hits_by_chr, misses_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr, anc_ins_by_chr,
-                                               anc_del_by_chr)
+    hits_by_chr, misses_by_chr, output_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
+                                                              anc_ins_by_chr, anc_del_by_chr)
 
     print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
 
-    print '\nFinal scores:'
-    for curr_chr in hits_by_chr.keys():
-        print ' %s - Hits: %i, Misses: %i' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr])
+    if misses_by_chr:
+        print '\nChromosome scores:'
+        for curr_chr in hits_by_chr.keys():
+            print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
+                                                               hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr]))
+        print 'Final score: %.3f' % (sum(hits_by_chr.values())/float(sum(misses_by_chr.values())))
 
     # Output results
     filename_in = args.input_file.rsplit('/', 1)[1]

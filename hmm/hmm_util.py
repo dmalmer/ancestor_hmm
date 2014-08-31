@@ -1,4 +1,5 @@
 
+import re
 from collections import defaultdict
 from itertools import tee, izip
 from math import e, log
@@ -20,6 +21,11 @@ def ancestor_blocks(ancestors, SNPs, return_SNPs=False):
             yield (SNPs[start_i, 1], SNPs[curr_i-1, 2], ancestors[start_i])
 
 
+# Convert string to int (if possible)
+def atoi(text):
+    return int(text) if text.isdigit() else text
+
+
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
 def log_add_pair(log_A, log_B):
@@ -34,6 +40,13 @@ def log_add_list(log_list):
     for l in log_list[1:]:
         log_sum = log_add_pair(log_sum, l)
     return log_sum
+
+
+# Key to sort by numerics within strings (ie. chr2 comes before chr11, etc.)
+#  (taken from http://nedbatchelder.com/blog/200712/human_sorting.html)
+def natural_keys(text):
+    # Use: alist.sort(key=natural_keys) sorts in human order
+    return [ atoi(c) for c in re.split('(\d+)', text) ]
 
 
 # Return a list of pairwise elements

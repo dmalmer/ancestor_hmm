@@ -9,7 +9,7 @@ from math import log
 from os import environ
 from time import time
 
-from hmm_output import write_ancestors_to_file, write_statistics
+from hmm_output import write_ancestors, write_scores, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, \
                      reclassify_ibd_and_unk, score_results
 from hmm_util import prob_tuples, read_recomb_rates, read_SNPs, read_SVs
@@ -225,8 +225,8 @@ if __name__ == "__main__":
                                                                  '_structural-variants.bed',
                                                                  WORKING_DIR + 'data/ancestor_insertions.bed',
                                                                  WORKING_DIR + 'data/ancestor_deletions.bed')
-    hits_by_chr, misses_by_chr, output_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
-                                                              anc_ins_by_chr, anc_del_by_chr)
+    hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
+                                                                  anc_ins_by_chr, anc_del_by_chr)
 
     print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
@@ -241,6 +241,7 @@ if __name__ == "__main__":
     # Output results
     filename_in = args.input_file.rsplit('/', 1)[1]
 
-    write_ancestors_to_file(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
+    write_ancestors(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
     write_statistics(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
                      args.trans_in_p, args.emit_same_p, trans_p, emit_p), run_count, time() - time_start)
+    write_scores(WORKING_DIR, filename_in, args.append_str, all_scores_by_chr)

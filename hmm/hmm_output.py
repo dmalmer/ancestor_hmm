@@ -3,23 +3,41 @@ from collections import defaultdict
 from datetime import datetime
 from os.path import isfile
 
-from hmm_util import ancestor_blocks
+from hmm_util import ancestor_blocks, natural_keys
 
 
 # Write ancestor classifications to a .bed file
-def write_ancestors_to_file(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
-    out_file = open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
-                    '.' + filename_in.rsplit('.', 1)[1], 'w')
-    out_len = 0
-    for curr_chr in sorted(ancestors_by_chr.keys()):
-        for pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
-            color_key = ancestor
-            if '_' in color_key:
-                color_key = 'IBA'
-            out_file.write(curr_chr + '\t' + pos_start + '\t' + pos_end + '\t' + ancestor + '\t0\t+\t' + pos_start +
-                           '\t' + pos_end + '\t' + state_RGBs[color_key] + '\n')
-            out_len += 1
-    out_file.close()
+def write_ancestors(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
+    with open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
+                    '.' + filename_in.rsplit('.', 1)[1], 'w') as f_out:
+        for curr_chr in sorted(ancestors_by_chr.keys(), key=natural_keys):
+            for pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
+                color_key = ancestor
+                if '_' in color_key:
+                    color_key = 'IBA'
+                f_out.write('{0}\t{1}\t{2}\t{3}\t0\t+\t{1}\t{2}\t{4}\n'.format(
+                    curr_chr,  # {0} - chromosome
+                    pos_start,  # {1} - start pos
+                    pos_end,  # {2} - end pos
+                    ancestor,  # {3} - ancestor label
+                    state_RGBs[color_key],  # {4} - label color
+                ))
+
+
+# Write hits and misses to a .bed file
+def write_scores(working_dir, filename_in, unique_output_name, all_scores_by_chr):
+    with open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_scores' + unique_output_name +
+                    '.' + filename_in.rsplit('.', 1)[1], 'w') as f_out:
+        for curr_chr in sorted(all_scores_by_chr.keys(), key=natural_keys):
+            for score in all_scores_by_chr[curr_chr]:
+                color = '51,255,51' if score[4] == 'Hit' else '255,51,51'
+                f_out.write('{0}\t{1}\t{2}\t{3}\t0\t+\t{1}\t{2}\t{4}\n'.format(
+                    curr_chr,  # {0} - chromosome
+                    score[0],  # {1} - start pos
+                    score[1],  # {2} - end pos
+                    score[4],  # {3} - 'Hit' or 'Miss'
+                    color  # {4} - green for hit, red for miss
+                ))
 
 
 # Write statistics of each run out to a file

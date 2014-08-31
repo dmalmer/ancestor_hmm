@@ -42,7 +42,7 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
                 len_after,  # {2} - output file length
                 float(len_before-len_after)/len_before,  # {3} - percentage difference
                 anc_counts['A']/float(len_after),  # {4}
-                anc_counts['ARK']/float(len_after),  # {5}
+                anc_counts['AKR']/float(len_after),  # {5}
                 anc_counts['BALBc']/float(len_after),  # {6}
                 anc_counts['C3HHe']/float(len_after),  # {7}
                 anc_counts['C57BL6N']/float(len_after),  # {8}
@@ -62,7 +62,7 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
     filename_out = working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
                    '.txt'
     if not isfile(filename_out):
-        line = 'Datetime\tStart_len\tFinal_len\t%_diff\t%_A\t%_ARK\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t' + \
+        line = 'Datetime\tStart_len\tFinal_len\t%_diff\t%_A\t%_AKR\t%_BALBc\t%_C3HHe\t%_C57BL6N\t%_DBA2\t' + \
                '%_Unknown\tRun_count\tTotal_run_time(s)\tUse_recomb_rates\tStart_trans_in\tStart_emit_same\t' + \
                'Final_trans_p\tFinal_emit_p\n' + line
 

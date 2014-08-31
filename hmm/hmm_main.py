@@ -121,8 +121,8 @@ if __name__ == "__main__":
     except KeyError:
         pass
 
-    STATES = ('Unk', 'A', 'ARK', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
-    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'ARK': '51,51,255', 'BALBc': '255,255,51',
+    STATES = ('Unk', 'A', 'AKR', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
+    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,51,255', 'BALBc': '255,255,51',
                   'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
 
     EFFECTIVE_POP = 1  # effective population (N_e) for recombination rate calculations
@@ -221,7 +221,8 @@ if __name__ == "__main__":
         run_count += 1
 
     # Score results
-    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain + '_sv.bed',
+    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain +
+                                                                 '_structural-variants.bed',
                                                                  WORKING_DIR + 'data/ancestor_insertions.bed',
                                                                  WORKING_DIR + 'data/ancestor_deletions.bed')
     hits_by_chr, misses_by_chr, output_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,

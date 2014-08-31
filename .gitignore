@@ -3,6 +3,11 @@
 *.bed
 *.txt
 *.idx
+
 old/*
+paper/*
+results/*
+igv/*
+
 .*
 

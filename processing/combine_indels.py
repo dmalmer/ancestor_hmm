@@ -39,14 +39,11 @@ with open('data/ancestor_insertions.bed', 'w') as f:
             pos_end = sorted_dict[i][0][1]
             label = sorted_dict[i][1]
             i += 1
-            #print 'start: s = ' + str(pos_start) + ', e = ' + str(pos_end) + ', l = ' + label
             while i < len(sorted_dict) and sorted_dict[i][0][0] < pos_end:
-                #print 'found: ' + str(sorted_dict[i])
                 pos_start = min(sorted_dict[i][0][0], pos_start)
                 pos_end = max(sorted_dict[i][0][1], pos_end)
                 label += sorted_dict[i][1]
                 i += 1
-            #print 'final: s = ' + str(pos_start) + ', e = ' + str(pos_end) + ', l = ' + clean_label(label)
             f.write(curr_chr + '\t' + str(pos_start) + '\t' + str(pos_end) + '\t' + clean_label(label) + '\n')
 
 with open('data/ancestor_deletions.bed', 'w') as f:
@@ -59,16 +56,9 @@ with open('data/ancestor_deletions.bed', 'w') as f:
             pos_end = sorted_dict[i][0][1]
             label = sorted_dict[i][1]
             i += 1
-            if curr_chr == 'chr16' and pos_start > 45060000 and pos_end < 45070000:
-                print 'start: s = ' + str(pos_start) + ', e = ' + str(pos_end) + ', l = ' + label
-                print sorted_dict[i]
             while i < len(sorted_dict) and sorted_dict[i][0][0] < pos_end:
-                if curr_chr == 'chr16' and pos_start > 45060000 and pos_end < 45070000:
-                    print 'found: ' + str(sorted_dict[i])
                 pos_start = min(sorted_dict[i][0][0], pos_start)
                 pos_end = max(sorted_dict[i][0][1], pos_end)
                 label += sorted_dict[i][1]
                 i += 1
-            if curr_chr == 'chr16' and pos_start > 45060000 and pos_end < 45070000:
-                print 'final: s = ' + str(pos_start) + ', e = ' + str(pos_end) + ', l = ' + clean_label(label)
             f.write(curr_chr + '\t' + str(pos_start) + '\t' + str(pos_end) + '\t' + clean_label(label) + '\n')

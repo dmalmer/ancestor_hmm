@@ -2,8 +2,8 @@
 #run with:
 # python bed_plots.py ISS unique
 # python bed_plots.py ISS full
-# python bed_plots.py unique
-# python bed_plots.py full
+# python bed_plots.py ILS unique
+# python bed_plots.py ILS full
 
 import sys
 import pylab
@@ -11,87 +11,67 @@ from collections import defaultdict
 
 if __name__ == "__main__":
 
-    UNIQUE_NAME = '_94in'
+    UNIQUE_NAME = '_a15u6'
 
-    strain = sys.argv[1]
-
-    if sys.argv[2].lower() == 'full':
-        snp_type = 'Full'
-    elif sys.argv[2].lower() == 'unique':
-        snp_type = 'temporary'
-
-    #chr3	3140748	4057786	ARK
+    strain = sys.argv[1].upper()
+    snp_type = sys.argv[2].lower()
 
     mice_distrb_indv = {} #dictionary of defaultdict's
     mice_distrb_aggr = defaultdict(float)
 
-    chromosomes = [
-            'chr1',
-            'chr2',
-            'chr3',
-            'chr4',
-            'chr5',
-            'chr6',
-            'chr7',
-            'chr8',
-            'chr9',
-            'chr10',
-            'chr11',
-            'chr12',
-            'chr13',
-            'chr14',
-            'chr15',
-            'chr16',
-            'chr17',
-            'chr18',
-            'chr19',
-            'chrX',
-            'chrY'
-        ]
-
+    chromosomes = []
 
     total_recomb = 0
-    for cur_chr in chromosomes:
-        f_in = open('../results/' + strain + '_' + snp_type + '_sorted_' + cur_chr + '_hmm-out' + UNIQUE_NAME + '.bed','r')
-        lines = f_in.readlines()
+    with open('../results/' + strain + '_' + snp_type + '_sorted_hmm-out' + UNIQUE_NAME + '.bed','r') as f:
+        line = f.readline()
 
-        mice_distrb_indv[cur_chr] = defaultdict(float)
-        for l in lines:
-            spl = l.strip().split('\t')
-            mice_distrb_indv[cur_chr][spl[3]] += (int(spl[2])-int(spl[1]))
+        curr_chr = line.split('\t')[0]
+        chromosomes.append(curr_chr)
+        mice_distrb_indv[curr_chr] = defaultdict(float)
+        while line != '':
+            spl = line.strip().split('\t')
+            if spl[0] != curr_chr:
+                curr_chr = spl[0]
+                chromosomes.append(curr_chr)
+                mice_distrb_indv[curr_chr] = defaultdict(float)
 
-            mice_distrb_aggr[spl[3]] += (int(spl[2])-int(spl[1]))
+            for anc in spl[3].split('_'):
+                mice_distrb_indv[curr_chr][anc] += (int(spl[2])-int(spl[1]))
+                mice_distrb_aggr[anc] += (int(spl[2])-int(spl[1]))
 
-        total_recomb += len(lines)
+            line = f.readline()
+            total_recomb += 1
 
     print 'total recombinations: ' + str(total_recomb)
 
     # Hard code colors to match WashU genome viewer
     mice_colors = {
-        'Unk'	    : '#707070', #gray
+        'Unk'       : '#707070', #gray
         'DBA2'      : 'r', #red
         'A'         : 'g', #green
-        'ARK'       : 'b', #blue
+        'AKR'       : 'b', #blue
         'BALBc'     : '#FFFF00', #yellow
         'C3HHe'     : '#FF9900', #orange
         'C57BL6N'   : '#800080' #purple
     }
 
     # Genome-wide
-    pylab.figure(figsize=(6,6))
-    pylab.pie(mice_distrb_aggr.values(), explode=None, labels=mice_distrb_aggr.keys(),
-              autopct='%1.1f%%', shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr.keys()))
+    pylab.figure(figsize=(6,6), facecolor='white')
+    patches, texts = pylab.pie(mice_distrb_aggr.values(), explode=None, #labels=mice_distrb_aggr.keys(), #autopct='%1.1f%%',
+              shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr.keys()), labeldistance=0.65)
     pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Genome-Wide Ancestor Distributions')
+    for t in texts:
+        t.set_horizontalalignment('center')
 
     # Individual chromosomes
-    pylab.figure()
+    pylab.figure(facecolor='white')
     i = 0
-    for chr in chromosomes:
+    for curr_chr in chromosomes:
         pylab.subplot(3,7,i)
         i += 1
-        pylab.pie(mice_distrb_indv[chr].values(), explode=None, labels=mice_distrb_indv[chr].keys(),
-                  autopct='%1.1f%%', shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_indv[chr].keys()))
-        pylab.title(chr)
+        pylab.pie(mice_distrb_indv[curr_chr].values(), explode=None, labels=mice_distrb_indv[curr_chr].keys(),
+                  autopct='%1.1f%%', shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_indv[curr_chr].keys()))
+        pylab.title(curr_chr)
     pylab.suptitle(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Chromosome-Wide Ancestor Distributions')
     #pylab.legend(miceColors.keys(),loc=6)
 

@@ -4,7 +4,7 @@ from itertools import izip
 from math import log, e
 from numpy import mean
 
-from hmm_util import ancestor_blocks, log_add_list, pairwise
+from hmm_util import ancestor_blocks, get_emit_key, pairwise
 
 
 # Calculate new transition probabilities
@@ -45,20 +45,13 @@ def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, max_emi
         for SNP, anc in zip(SNPs_by_chr[curr_chr], ancestors):
             # Count SNP observations
             for s in states:
-                SNP_key = s
-                if s == 'Unk':
-                    if SNP[3] != input_strain:
-                        SNP_key = '~' + s
-                elif s not in SNP[3].split('_'):
-                    SNP_key = '~' + s
+                SNP_key = get_emit_key(s, SNP[3], input_strain)
                 SNP_counts[SNP_key] += 1
 
             # Count ancestor classifications
             for a in anc.split('_'):
-                if a in SNP[3].split('_'):
-                    ancestor_counts[a] += 1
-                else:
-                    ancestor_counts['~'+a] += 1
+                anc_key = get_emit_key(a, SNP[3], input_strain)
+                ancestor_counts[anc_key] += 1
 
     # New emission rates of <state> and <~state> are ancestor_counts[<state>]/SNP_counts[<state>] and
     #  ancestor_counts[<~state>]/SNP_counts[<~state>] respectively, normalized to 1.0

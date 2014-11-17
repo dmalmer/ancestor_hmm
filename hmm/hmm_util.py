@@ -26,6 +26,17 @@ def atoi(text):
     return int(text) if text.isdigit() else text
 
 
+# Return the emit key
+def get_emit_key(state, SNPs_str, input_strain):
+    if state == 'Unk' and SNPs_str == input_strain:
+        return state
+    SNPs = SNPs_str.split('_')
+    if (input_strain in SNPs and state in SNPs) or (input_strain not in SNPs and state not in SNPs):
+        return state
+    else:
+        return '~' + state
+
+
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
 def log_add_pair(log_A, log_B):

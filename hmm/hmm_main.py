@@ -12,7 +12,7 @@ from time import time
 from hmm_output import write_ancestors, write_scores, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, \
                      reclassify_ibd_and_unk, score_results
-from hmm_util import prob_tuples, read_recomb_rates, read_SNPs, read_SVs
+from hmm_util import get_emit_key, prob_tuples, read_recomb_rates, read_SNPs, read_SVs
 
 
 # Arguments
@@ -51,12 +51,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
     # Start probabilities
     for s in states:
         # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-        emit_key = s
-        if s == 'Unk':
-            if SNPs[0][3] != input_strain:
-                emit_key = '~' + s
-        elif s not in SNPs[0][3].split('_'):
-            emit_key = '~' + s
+        emit_key = get_emit_key(s, SNPs[0][3], input_strain)
         # Probability of a given state at SNPs[0] is emit prob of stat
         prob_nodes[0][s] = emit_p[s][emit_key]
         ancestors_by_state[s] = [s]
@@ -78,12 +73,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
         # At every SNP, find probabilities for each state
         for curr_state in states:
             # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-            emit_key = curr_state
-            if curr_state == 'Unk':
-                if SNPs[i][3] != input_strain:
-                    emit_key = '~' + curr_state
-            elif curr_state not in SNPs[i][3].split('_'):
-                emit_key = '~' + curr_state
+            emit_key = get_emit_key(curr_state, SNPs[i][3], input_strain)
 
             # The probability of a given state for a given SNP is the maximum out of ((prob prev_state) *
             #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
@@ -122,7 +112,7 @@ if __name__ == "__main__":
         pass
 
     STATES = ('Unk', 'A', 'AKR', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
-    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,51,255', 'BALBc': '255,255,51',
+    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51',
                   'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
 
     EFFECTIVE_POP = 1  # effective population (N_e) for recombination rate calculations
@@ -149,7 +139,8 @@ if __name__ == "__main__":
     # Set up parallel python server for viterbi function
     if args.parallel:
         job_server = pp.Server()
-        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate,), modules=('numpy', 'math'))
+        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
+                               modules=('numpy', 'math'))
 
     # Expectation-Maximization loop
     tot_prob_dist = 10.

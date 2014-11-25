@@ -35,6 +35,8 @@ def read_arguments():
 
     parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-o', '--append-str', help='Append string to output filename', type=str, default='')
+    parser.add_argument('-w', '--write-iter', help='Calculate scores and write to output file at each iteration within '
+                                                   'the EM loop', action='store_true')
     parser.add_argument('-v', '--verbose', help='Verbose', action='store_true')
 
     return parser.parse_args()
@@ -124,12 +126,17 @@ if __name__ == "__main__":
     args = read_arguments()
     input_strain = args.input_file.strip().rsplit('/',1)[1].split('_')[0] \
                    if args.input_file.strip().rsplit('/',1)[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
+    filename_in = args.input_file.rsplit('/', 1)[1]
 
     # Read in data
     SNPs_by_chr = read_SNPs(args.input_file)
     recomb_rate_dict = {}
     if args.use_recomb_rates:
         recomb_rate_dict = read_recomb_rates(WORKING_DIR + 'data/mouse_recomb_rates.csv')
+    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain +
+                                                                 '_structural-variants.bed',
+                                                                 WORKING_DIR + 'data/ancestor_insertions.bed',
+                                                                 WORKING_DIR + 'data/ancestor_deletions.bed')
 
     # Start, transition, and emission probabilities
     trans_p = {s_outer: {s_inner: log(args.trans_in_p) if s_inner == s_outer else log((1 - args.trans_in_p) / 6)
@@ -206,18 +213,31 @@ if __name__ == "__main__":
 
             print 'Total probability distance: %.3f' % tot_prob_dist
 
+        # If set, write out results at each iteration
+        if args.write_iter:
+            # Score results
+            hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr,
+                                                                          strain_SVs_by_chr, anc_ins_by_chr,
+                                                                          anc_del_by_chr)
+
+            final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+
+            # Output results
+            write_ancestors(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
+            write_statistics(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr,
+                             (args.use_recomb_rates, args.trans_in_p, args.emit_same_p, trans_p, emit_p),
+                             final_score, run_count, time() - time_start)
+            write_scores(WORKING_DIR, filename_in, args.append_str, all_scores_by_chr)
+
         trans_p = new_trans_p
         emit_p = new_emit_p
 
         run_count += 1
 
     # Score results
-    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain +
-                                                                 '_structural-variants.bed',
-                                                                 WORKING_DIR + 'data/ancestor_insertions.bed',
-                                                                 WORKING_DIR + 'data/ancestor_deletions.bed')
     hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
                                                                   anc_ins_by_chr, anc_del_by_chr)
+    final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
 
     print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
@@ -227,12 +247,10 @@ if __name__ == "__main__":
         for curr_chr in hits_by_chr.keys():
             print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
                                                                hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr]))
-        print 'Final score: %.3f' % (sum(hits_by_chr.values())/float(sum(misses_by_chr.values())))
+        print 'Final score: %.3f' % (final_score)
 
     # Output results
-    filename_in = args.input_file.rsplit('/', 1)[1]
-
     write_ancestors(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
     write_statistics(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
-                     args.trans_in_p, args.emit_same_p, trans_p, emit_p), run_count, time() - time_start)
+                     args.trans_in_p, args.emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start)
     write_scores(WORKING_DIR, filename_in, args.append_str, all_scores_by_chr)

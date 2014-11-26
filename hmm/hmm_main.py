@@ -220,7 +220,11 @@ if __name__ == "__main__":
                                                                           strain_SVs_by_chr, anc_ins_by_chr,
                                                                           anc_del_by_chr)
 
-            final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+            try:
+                final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+            except ZeroDivisionError:
+                final_score = -1
+                print 'Run %i final_score ZeroDivisionError, final_score set to -1' % run_count
 
             # Output results
             write_ancestors(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
@@ -237,17 +241,20 @@ if __name__ == "__main__":
     # Score results
     hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
                                                                   anc_ins_by_chr, anc_del_by_chr)
-    final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+    try:
+        final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+    except ZeroDivisionError:
+        final_score = -1
+        print 'Final final_score ZeroDivisionError, final_score set to -1'
 
     print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
 
-    if misses_by_chr:
-        print '\nChromosome scores:'
-        for curr_chr in hits_by_chr.keys():
-            print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
-                                                               hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr]))
-        print 'Final score: %.3f' % (final_score)
+    print '\nChromosome scores:'
+    for curr_chr in hits_by_chr.keys():
+        print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
+                                                           hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr]))
+    print 'Final score: %.3f' % (final_score)
 
     # Output results
     write_ancestors(WORKING_DIR, filename_in, args.append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)

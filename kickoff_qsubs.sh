@@ -13,51 +13,60 @@ ils_c()
 
 iss_a()
 {
-	qsub -v STRAIN=ISS,A="-a .8",U="-u .6",O="-o _a8u6" -N hmm_ISS_a8u6 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .8",U="-u .4",O="-o _a8u4" -N hmm_ISS_a8u4 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .8",U="-u .2",O="-o _a8u2" -N hmm_ISS_a8u2 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .8",U="-u .1",O="-o _a8u1" -N hmm_ISS_a8u1 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .6",U="-u .6",O="-o _a6u6" -N hmm_ISS_a6u6 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .6",U="-u .4",O="-o _a6u4" -N hmm_ISS_a6u4 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .6",U="-u .2",O="-o _a6u2" -N hmm_ISS_a6u2 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .6",U="-u .1",O="-o _a6u1" -N hmm_ISS_a6u1 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .4",U="-u .6",O="-o _a4u6" -N hmm_ISS_a4u6 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .4",U="-u .4",O="-o _a4u4" -N hmm_ISS_a4u4 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .4",U="-u .2",O="-o _a4u2" -N hmm_ISS_a4u2 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .4",U="-u .1",O="-o _a4u1" -N hmm_ISS_a4u1 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .2",U="-u .6",O="-o _a2u6" -N hmm_ISS_a2u6 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .2",U="-u .4",O="-o _a2u4" -N hmm_ISS_a2u4 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .2",U="-u .2",O="-o _a2u2" -N hmm_ISS_a2u2 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .2",U="-u .1",O="-o _a2u1" -N hmm_ISS_a2u1 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .1",U="-u .6",O="-o _a1u6" -N hmm_ISS_a1u6 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .1",U="-u .4",O="-o _a1u4" -N hmm_ISS_a1u4 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .1",U="-u .2",O="-o _a1u2" -N hmm_ISS_a1u2 ../run_hmm.sh
-	qsub -v STRAIN=ISS,A="-a .1",U="-u .1",O="-o _a1u1" -N hmm_ISS_a1u1 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1.5 -u .6 -o _a15u6" -N hmm_ISS_a15u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1.5 -u .8 -o _a15u8" -N hmm_ISS_a15u8 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1. -u .6 -o _a10u6" -N hmm_ISS_a10u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1. -u .8 -o _a10u8" -N hmm_ISS_a10u8 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a .5 -u .6 -o _a5u6" -N hmm_ISS_a5u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a .5 -u .8 -o _a5u8" -N hmm_ISS_a5u8 ../run_hmm.sh
 }
 
 ils_a()
 {
-	qsub -v STRAIN=ILS,A="-a .8",U="-u .6",O="-o _a8u6" -N hmm_ILS_a8u6 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .8",U="-u .4",O="-o _a8u4" -N hmm_ILS_a8u4 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .8",U="-u .2",O="-o _a8u2" -N hmm_ILS_a8u2 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .8",U="-u .1",O="-o _a8u1" -N hmm_ILS_a8u1 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .6",U="-u .6",O="-o _a6u6" -N hmm_ILS_a6u6 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .6",U="-u .4",O="-o _a6u4" -N hmm_ILS_a6u4 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .6",U="-u .2",O="-o _a6u2" -N hmm_ILS_a6u2 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .6",U="-u .1",O="-o _a6u1" -N hmm_ILS_a6u1 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .4",U="-u .6",O="-o _a4u6" -N hmm_ILS_a4u6 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .4",U="-u .4",O="-o _a4u4" -N hmm_ILS_a4u4 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .4",U="-u .2",O="-o _a4u2" -N hmm_ILS_a4u2 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .4",U="-u .1",O="-o _a4u1" -N hmm_ILS_a4u1 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .2",U="-u .6",O="-o _a2u6" -N hmm_ILS_a2u6 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .2",U="-u .4",O="-o _a2u4" -N hmm_ILS_a2u4 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .2",U="-u .2",O="-o _a2u2" -N hmm_ILS_a2u2 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .2",U="-u .1",O="-o _a2u1" -N hmm_ILS_a2u1 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .1",U="-u .6",O="-o _a1u6" -N hmm_ILS_a1u6 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .1",U="-u .4",O="-o _a1u4" -N hmm_ILS_a1u4 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .1",U="-u .2",O="-o _a1u2" -N hmm_ILS_a1u2 ../run_hmm.sh
-	qsub -v STRAIN=ILS,A="-a .1",U="-u .1",O="-o _a1u1" -N hmm_ILS_a1u1 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1.5 -u .6 -o _a15u6" -N hmm_ILS_a15u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1.5 -u .8 -o _a15u8" -N hmm_ILS_a15u8 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1. -u .6 -o _a10u6" -N hmm_ILS_a10u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1. -u .8 -o _a10u8" -N hmm_ILS_a10u8 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a .5 -u .6 -o _a5u6" -N hmm_ILS_a5u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a .5 -u .8 -o _a5u8" -N hmm_ILS_a5u8 ../run_hmm.sh
 }
+
+iss_p()
+{
+	qsub -v STRAIN=ISS,P="-pw -a 1.5 -u .6 -o _a15u6pw" -N hmm_ISS_a15u6pw ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a 1.5 -u .8 -o _a15u8pw" -N hmm_ISS_a15u8pw ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a 1. -u .6 -o _a10u6pw" -N hmm_ISS_a10u6pw ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a 1. -u .8 -o _a10u8pw" -N hmm_ISS_a10u8pw ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a .5 -u .6 -o _a5u6pw" -N hmm_ISS_a5u6pw ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a .5 -u .8 -o _a5u8pw" -N hmm_ISS_a5u8pw ../run_hmm.sh
+}
+
+ils_p()
+{
+	qsub -v STRAIN=ILS,P="-pw -a 1.5 -u .6 -o _a15u6pw" -N hmm_ILS_a15u6pw ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-pw -a 1.5 -u .8 -o _a15u8pw" -N hmm_ILS_a15u8pw ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-pw -a 1. -u .6 -o _a10u6pw" -N hmm_ILS_a10u6pw ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-pw -a 1. -u .8 -o _a10u8pw" -N hmm_ILS_a10u8pw ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-pw -a .5 -u .6 -o _a5u6pw" -N hmm_ILS_a5u6pw ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-pw -a .5 -u .8 -o _a5u8pw" -N hmm_ILS_a5u8pw ../run_hmm.sh
+}
+
+iss_u()
+{
+	qsub -v STRAIN=ISS,P="-a 1. -u .6 -o _a10u6" -N hmm_ISS_a10u6 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1. -u .7 -o _a10u7" -N hmm_ISS_a10u7 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1. -u .8 -o _a10u8" -N hmm_ISS_a10u8 ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-a 1. -u .9 -o _a10u9" -N hmm_ISS_a10u9 ../run_hmm.sh
+}
+
+ils_u()
+{
+	qsub -v STRAIN=ILS,P="-a 1. -u .6 -o _a10u6" -N hmm_ILS_a10u6 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1. -u .7 -o _a10u7" -N hmm_ILS_a10u7 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1. -u .8 -o _a10u8" -N hmm_ILS_a10u8 ../run_hmm.sh
+	qsub -v STRAIN=ILS,P="-a 1. -u .9 -o _a10u9" -N hmm_ILS_a10u9 ../run_hmm.sh
+}
+
 iss_i()
 {
 	qsub -v STRAIN=ISS,CHR=_chr1 -N hmm_ISS_1 ../run_hmm.sh
@@ -143,6 +152,26 @@ then
 elif [[ $1 == "ILS_A" ]]
 then
 	ils_a
+elif [[ $1 == "ALL_U" ]]
+then
+	iss_u
+	ils_u
+elif [[ $1 == "ISS_U" ]]
+then
+	iss_u
+elif [[ $1 == "ILS_U" ]]
+then
+	ils_u
+elif [[ $1 == "ALL_P" ]]
+then
+	iss_p
+	ils_p
+elif [[ $1 == "ISS_P" ]]
+then
+	iss_p
+elif [[ $1 == "ILS_P" ]]
+then
+	ils_p
 elif [[ $1 == "TEST" ]]
 then
     test_run

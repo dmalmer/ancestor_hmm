@@ -49,7 +49,7 @@ if __name__ == "__main__":
         'Unk'       : '#707070', #gray
         'DBA2'      : 'r', #red
         'A'         : 'g', #green
-        'AKR'       : 'b', #blue
+        'AKR'       : '#3366FF', #light blue
         'BALBc'     : '#FFFF00', #yellow
         'C3HHe'     : '#FF9900', #orange
         'C57BL6N'   : '#800080' #purple

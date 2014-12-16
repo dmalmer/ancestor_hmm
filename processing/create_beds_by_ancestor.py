@@ -16,7 +16,7 @@ if __name__ == "__main__":
         snp_type = 'temporary'
 
 
-    anc_RGBs = {strain: '128,128,128', 'A': '0,153,0', 'AKR': '51,51,255', 'BALBc': '255,255,51', 'C3HHe': '255,153,51',
+    anc_RGBs = {strain: '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51', 'C3HHe': '255,153,51',
                 'C57BL6N': '102,0,204', 'DBA2': '255,51,51'}
 
     f_in = open('../data/' + strain + '_' + snp_type + '_sorted.bed', 'r')

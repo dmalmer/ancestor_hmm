@@ -17,21 +17,24 @@ from hmm_util import get_emit_key, prob_tuples, read_recomb_rates, read_SNPs, re
 
 # Arguments
 def read_arguments():
-    parser = argparse.ArgumentParser(add_help=False)
+    parser = argparse.ArgumentParser(add_help=True)
     parser.add_argument('-i', '--input-file', help='Input SNP data file', type=str, required=True)
 
     parser.add_argument('-t', '--trans-in-p', help='Starting trans-in probability', type=float, default=.94)
     parser.add_argument('-e', '--emit-same-p', help='Starting emit-same probability', type=float, default=.99)
     parser.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', type=int, default=50)
 
-    parser.add_argument('-r', '--use-recomb-rates', help='Incorporate recombination rates as priors for transition '
-                                                         'probabilities', action='store_true')
     parser.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel',
                         action='store_true')
+
+    parser.add_argument('-r', '--use-recomb-rates', help='Incorporate recombination rates as priors for transition '
+                                                         'probabilities', action='store_true')
     parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations',
                         type=float, default=1.)
     parser.add_argument('-u', '--unk-cutoff', help='Cutoff for fraction of Unk SNPs required for an ancestor block to '
                                                    'be relabeled as Unk', type=float, default=1.)
+    parser.add_argument('-pw', '--post-wait', help='Wait until the end of the EM loops to run the posterior '
+                                                   'calculations for Unk cutoff and IBD regions', action='store_true')
 
     parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-o', '--append-str', help='Append string to output filename', type=str, default='')
@@ -108,7 +111,7 @@ if __name__ == "__main__":
     # Constants
     WORKING_DIR = '../'
     try:
-        if environ['HOSTNAME'][-6:] == '.local':
+        if 'pando' in environ['PBS_O_HOST'] or 'vieques' in environ['PBS_O_HOST']:
             WORKING_DIR = '/Users/dama9282/AncestorInference/'
     except KeyError:
         pass
@@ -181,7 +184,8 @@ if __name__ == "__main__":
 
         # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
         #  ancestors are identical
-        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, args.unk_cutoff)
+        if not args.post_wait:
+            ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, args.unk_cutoff)
 
         # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, STATES)
@@ -237,6 +241,10 @@ if __name__ == "__main__":
         emit_p = new_emit_p
 
         run_count += 1
+
+    # If it wasn't done during EM iterations, reclassify Unk and IBD regions
+    if args.post_wait:
+        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, args.unk_cutoff)
 
     # Score results
     hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,

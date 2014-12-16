@@ -9,5 +9,8 @@ paper/*
 results/*
 igv/*
 
+deploy*.sh
+retrieve*.sh
+
 .*
 

@@ -3,7 +3,7 @@ import re
 from collections import defaultdict
 from itertools import tee, izip
 from math import e, log
-from numpy import array
+from numpy import arange, array
 
 
 # Generator to loop over blocks of sequential ancestors
@@ -23,7 +23,27 @@ def ancestor_blocks(ancestors, SNPs, return_SNPs=False):
 
 # Convert string to int (if possible)
 def atoi(text):
-    return int(text) if text.isdigit() else text
+    try:
+        return int(text)
+    except ValueError:
+        return text
+
+
+# Convert string to float (if possible)
+def atof(text):
+    try:
+        return float(text)
+    except ValueError:
+        return text
+
+
+# Create range of values for grid search
+def create_grid_range(input_params, grid_size):
+    start, stop = [float(p) for p in input_params.strip('[](){}<>').split(',')]
+    grid_range = list(arange(start, stop, (stop-start)/grid_size))
+    grid_range.append(stop)
+
+    return grid_range
 
 
 # Return the emit key

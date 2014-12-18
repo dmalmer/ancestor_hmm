@@ -37,7 +37,7 @@ def read_arguments():
                                                    'calculations for Unk cutoff and IBD regions', action='store_true')
 
     parser.add_argument('-g', '--grid-size', help='Number of items to divide a range of input values into', type=int,
-                        default=1)
+                        default=2)
 
     parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-o', '--append-str', help='Append custom string to output filename, or choose \'auto\' to '
@@ -114,7 +114,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
                          for s_inner in STATES} for s_outer in STATES}
     emit_p = {s: {s: log(emit_same_p), '~'+s: log(1 - emit_same_p)} for s in STATES}
 
-    # Expectation-Maximization loop
+    # EM loop
     tot_prob_dist = 10.
     run_count = 0
     while tot_prob_dist > PROB_DIST_CUTOFF and run_count < int(args.max_iter):
@@ -282,18 +282,22 @@ if __name__ == "__main__":
     adjust_recomb_range = [args.adjust_recomb]
     unk_cutoff_range = [args.unk_cutoff]
 
-    if args.grid_size > 1:
-        if not isinstance(args.trans_in_p, float):
-            trans_in_p_range = create_grid_range(args.trans_in_p, args.grid_size)
-        if not isinstance(args.emit_same_p, float):
-            emit_same_p_range = create_grid_range(args.emit_same_p, args.grid_size)
-        if not isinstance(args.adjust_recomb, float):
-            adjust_recomb_range = create_grid_range(args.adjust_recomb, args.grid_size)
-        if not isinstance(args.unk_cutoff, float):
-            unk_cutoff_range = create_grid_range(args.unk_cutoff, args.grid_size)
-        # Always use automatic string append when performing a grid search
+    # Set parameter ranges for grid searches
+    if not isinstance(args.trans_in_p, float):
+        trans_in_p_range = create_grid_range(args.trans_in_p, args.grid_size)
+        use_auto_str = True
+    if not isinstance(args.emit_same_p, float):
+        emit_same_p_range = create_grid_range(args.emit_same_p, args.grid_size)
+        use_auto_str = True
+    if not isinstance(args.adjust_recomb, float):
+        adjust_recomb_range = create_grid_range(args.adjust_recomb, args.grid_size)
+        use_auto_str = True
+    if not isinstance(args.unk_cutoff, float):
+        unk_cutoff_range = create_grid_range(args.unk_cutoff, args.grid_size)
         use_auto_str = True
 
+    print trans_in_p_range
+    # Kickoff EM loop across all ranges of parameters
     for trans_in_p in trans_in_p_range:
         for emit_same_p in emit_same_p_range:
             for adjust_recomb in adjust_recomb_range:

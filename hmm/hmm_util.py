@@ -39,8 +39,8 @@ def atof(text):
 
 # Create range of values for grid search
 def create_grid_range(input_params, grid_size):
-    start, stop = [float(p) for p in input_params.strip('[](){}<>').split(',')]
-    grid_range = list(arange(start, stop, (stop-start)/grid_size))
+    start, stop = [float(p) for p in input_params.strip('[](){}<>').split('-')]
+    grid_range = list(arange(start, stop, (stop-start)/(grid_size-1)))
     grid_range.append(stop)
 
     return grid_range

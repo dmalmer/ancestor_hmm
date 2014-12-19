@@ -42,7 +42,7 @@ def write_scores(working_dir, filename_in, unique_output_name, all_scores_by_chr
 
 # Write statistics of each run out to a file
 def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params,
-                     final_score, run_count, tot_run_time):
+                     final_score, run_count, tot_run_time, final_prob_dist):
     len_before = 0
     for SNPs in SNPs_by_chr.values():
         len_before += len(SNPs)
@@ -54,7 +54,7 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
             anc_counts[ancestor] += 1
             len_after += 1
 
-    line = '{0}\t{1:.3f}\t{2}\t{3}\t{4:.2%}\t{5:.3f}\t{6:.3f}\t{7:.3f}\t{8:.3f}\t{9:.3f}\t{10:.3f}\t{11}\t'.format(
+    line = '{0}\t{1:.3f}\t{2}\t{3}\t{4:.2%}\t{5:.3f}\t{6:.3f}\t{7:.3f}\t{8:.3f}\t{9:.3f}\t{10:.3f}\t{11:.3f}\t'.format(
                 datetime.now().strftime('%m/%d/%y-%H:%M'),  # {0} - date and time of run
                 final_score, # {1} - final score
                 len_before,  # {2} - input file length
@@ -68,14 +68,15 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
                 anc_counts['DBA2']/float(len_after),  # {10}
                 anc_counts['Unk']/float(len_after)  # {11}
             )
-    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\n'.format(
+    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7:.4f}\n'.format(
                 run_count,  # {0}
                 tot_run_time,  # {1}
                 starting_params[0],  # {2} - use_recomb_rates
                 starting_params[1],  # {3} - def_trans_in_p
                 starting_params[2],  # {4} - def_emit_same_p
                 starting_params[3],  # {5} - final trans_p
-                starting_params[4]  # {6} - final emit_p
+                starting_params[4],  # {6} - final emit_p
+                final_prob_dist  # {7} - final probability distance
             )
 
     filename_out = working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \

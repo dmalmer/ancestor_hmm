@@ -195,7 +195,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
             write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
             write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr,
                              (args.use_recomb_rates, trans_in_p, emit_same_p, trans_p, emit_p),
-                             final_score, run_count, time() - time_start)
+                             final_score, run_count, time() - time_start, tot_prob_dist)
             write_scores(WORKING_DIR, filename_in, append_str, all_scores_by_chr)
 
         trans_p = new_trans_p
@@ -228,11 +228,13 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
                                                            chr_score)
     print 'Final score: %.3f' % (final_score)
 
-    # Output results
-    write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
-    write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
-                     trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start)
-    write_scores(WORKING_DIR, filename_in, append_str, all_scores_by_chr)
+    # If it wasn't done during EM iterations, output final results
+    if not args.write_iter:
+        write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
+        write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
+                         trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start,
+                         tot_prob_dist)
+        write_scores(WORKING_DIR, filename_in, append_str, all_scores_by_chr)
 
 
 # Main method

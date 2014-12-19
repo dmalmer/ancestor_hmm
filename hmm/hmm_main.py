@@ -220,8 +220,12 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
 
     print '\nChromosome scores:'
     for curr_chr in hits_by_chr.keys():
+        try:
+            chr_score = hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr])
+        except ZeroDivisionError:
+            chr_score = -1
         print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
-                                                           hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr]))
+                                                           chr_score)
     print 'Final score: %.3f' % (final_score)
 
     # Output results
@@ -296,7 +300,6 @@ if __name__ == "__main__":
         unk_cutoff_range = create_grid_range(args.unk_cutoff, args.grid_size)
         use_auto_str = True
 
-    print trans_in_p_range
     # Kickoff EM loop across all ranges of parameters
     for trans_in_p in trans_in_p_range:
         for emit_same_p in emit_same_p_range:

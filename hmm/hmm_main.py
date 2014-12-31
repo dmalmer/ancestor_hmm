@@ -52,6 +52,12 @@ def read_arguments():
 # Viterbi algorithm
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
             recomb_adjustment, use_recomb_rates, verbose):
+    import platform
+    print 'platform.node() = ' + str(platform.node())
+
+    import socket
+    print 'socket.gethostname() = ' + str(socket.gethostname())
+
     # Initialize
     prob_nodes = numpy.zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}
@@ -108,7 +114,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
 
 
 # Expectation-Maximization loop
-def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str):
+def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str, job_server=None, vit_func=None):
     # Start, transition, and emission probabilities
     trans_p = {s_outer: {s_inner: log(trans_in_p) if s_inner == s_outer else log((1 - trans_in_p) / 6)
                          for s_inner in STATES} for s_outer in STATES}
@@ -134,7 +140,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
 
             for curr_chr, job in jobs:
                 ancestors_by_chr[curr_chr] = job()
-            job_server.wait()
+            #job_server.wait()
 
             if args.verbose:
                 job_server.print_stats()
@@ -276,12 +282,6 @@ if __name__ == "__main__":
                                                                  WORKING_DIR + 'data/ancestor_insertions.bed',
                                                                  WORKING_DIR + 'data/ancestor_deletions.bed')
 
-    # Set up parallel python server for viterbi function
-    if args.parallel:
-        job_server = pp.Server()
-        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
-                               modules=('numpy', 'math'))
-
     # Create lists of input parameters for grid searching (lists will be of size 1 if there is no range of values)
     trans_in_p_range = [args.trans_in_p]
     emit_same_p_range = [args.emit_same_p]
@@ -302,11 +302,33 @@ if __name__ == "__main__":
         unk_cutoff_range = create_grid_range(args.unk_cutoff, args.grid_size)
         use_auto_str = True
 
-    # Kickoff EM loop across all ranges of parameters
+    # Kickoff EM loop across all ranges of parameters, spread out across servers
+    if args.parallel:
+        server_names = ('node-25', 'node-26')
+        #job_server = pp.Server(ppservers=(server_name,))
+        job_server = pp.Server()
+        em_func = pp.Template(job_server, expectation_maximization, depfuncs=(calc_recomb_rate, get_emit_key, viterbi, 
+                              reclassify_ibd_and_unk, calc_new_trans_p, calc_new_emit_p, prob_dist, prob_tuples,
+                              score_results, write_ancestors, write_statistics, write_scores))
+        vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
+                            modules=('numpy', 'math'))
+    
+    i = 0
     for trans_in_p in trans_in_p_range:
         for emit_same_p in emit_same_p_range:
             for adjust_recomb in adjust_recomb_range:
                 for unk_cutoff in unk_cutoff_range:
                     append_str = '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff) \
                                  if use_auto_str else args.append_str
-                    expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str)
+                    #if args.parallel:
+                    #    job = em_func.submit(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str,
+                    #                         job_server, vit_func)
+                    #    job()
+                    #else:
+                    expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str,
+                                             job_server, vit_func)
+                    
+                    i += 1
+
+    if args.parallel:
+        job_server.wait()

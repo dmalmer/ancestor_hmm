@@ -54,21 +54,24 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
             anc_counts[ancestor] += 1
             len_after += 1
 
-    line = '{0}\t{1:.3f}\t{2}\t{3}\t{4:.2%}\t{5:.3f}\t{6:.3f}\t{7:.3f}\t{8:.3f}\t{9:.3f}\t{10:.3f}\t{11:.3f}\t'.format(
+    line = '{0}\t{1:.3f}\t{2:.4f}\t{3}\t{4}\t{5:.2%}\t'.format(
                 datetime.now().strftime('%m/%d/%y-%H:%M'),  # {0} - date and time of run
                 final_score, # {1} - final score
-                len_before,  # {2} - input file length
-                len_after,  # {3} - output file length
-                float(len_before-len_after)/len_before,  # {4} - percentage difference
-                anc_counts['A']/float(len_after),  # {5}
-                anc_counts['AKR']/float(len_after),  # {6}
-                anc_counts['BALBc']/float(len_after),  # {7}
-                anc_counts['C3HHe']/float(len_after),  # {8}
-                anc_counts['C57BL6N']/float(len_after),  # {9}
-                anc_counts['DBA2']/float(len_after),  # {10}
-                anc_counts['Unk']/float(len_after)  # {11}
+                final_prob_dist, # {2} - final probability distance
+                len_before,  # {3} - input file length
+                len_after,  # {4} - output file length
+                float(len_before-len_after)/len_before,  # {5} - percentage difference
             )
-    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7:.4f}\n'.format(
+    line += '{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\t{4:.3f}\t{5:.3f}\t{6:.3f}\t'.format(
+                anc_counts['A']/float(len_after),  # {0}
+                anc_counts['AKR']/float(len_after),  # {1}
+                anc_counts['BALBc']/float(len_after),  # {2}
+                anc_counts['C3HHe']/float(len_after),  # {3}
+                anc_counts['C57BL6N']/float(len_after),  # {4}
+                anc_counts['DBA2']/float(len_after),  # {5}
+                anc_counts['Unk']/float(len_after)  # {6}
+            )
+    line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\n'.format(
                 run_count,  # {0}
                 tot_run_time,  # {1}
                 starting_params[0],  # {2} - use_recomb_rates
@@ -76,15 +79,35 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
                 starting_params[2],  # {4} - def_emit_same_p
                 starting_params[3],  # {5} - final trans_p
                 starting_params[4],  # {6} - final emit_p
-                final_prob_dist  # {7} - final probability distance
             )
 
     filename_out = working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
                    '.txt'
     if not isfile(filename_out):
-        line = 'Datetime\tFinal_score\tStart_len\tFinal_len\t%_diff\t%_A\t%_AKR\t%_BALBc\t%_C3HHe\t%_C57BL6N\t' + \
-               '%_DBA2\t%_Unknown\tRun_count\tTotal_run_time(s)\tUse_recomb_rates\tStart_trans_in\t' + \
-               'Start_emit_same\tFinal_trans_p\tFinal_emit_p\n' + line
+        header = '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t' \
+                 '{18}\t{19}\n'.format(
+                    'Datetime',
+                    'Final_score',
+                    'Final_prob_dist',
+                    'Start_len',
+                    'Final_len',
+                    '%_diff',
+                    '%_A',
+                    '%_AKR',
+                    '%_BALBc',
+                    '%_C3HHe',
+                    '%_C57BL6N',
+                    '%_DBA2',
+                    '%_Unknown',
+                    'Run_count',
+                    'Total_run_time(s)',
+                    'Use_recomb_rates',
+                    'Start_trans_in',
+                    'Start_emit_same',
+                    'Final_trans_p',
+                    'Final_emit_p'
+                )
+        line = header + line
 
     with open(filename_out, 'a') as f:
         f.write(line)

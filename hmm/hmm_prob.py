@@ -155,11 +155,11 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
             for SNP in SNPs_section:
                 if SNP[3] == input_strain:
                     SNP_counts['Unk'] += 1
-                else:
-                    for anc in SNP[3].split('_')[1:]:
+                elif input_strain in SNP[3]:
+                    for anc in SNP[3].split('_'):
                         SNP_counts[anc] += 1
 
-            # First, check if haplotype block comes from an unsequenced ancestor
+            # First, check if haplotype block comes from an unsequenced ancestor 
             if int(SNP_counts['Unk']) > 2 and SNP_counts['Unk'] >= unk_cutoff * SNP_counts[ancestor]:
                 new_ancestors.extend(['Unk'] * len(SNPs_section))
 
@@ -172,7 +172,7 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
                 new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
 
         new_ancestors_by_chr[curr_chr] = new_ancestors
-
+    
     return new_ancestors_by_chr
 
 

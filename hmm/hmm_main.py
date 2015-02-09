@@ -140,7 +140,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
 
             for curr_chr, job in jobs:
                 ancestors_by_chr[curr_chr] = job()
-            #job_server.wait()
+            job_server.wait()
 
             if args.verbose:
                 job_server.print_stats()
@@ -234,8 +234,8 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
                                                            chr_score)
     print 'Final score: %.3f' % (final_score)
 
-    # If it wasn't done during EM iterations, output final results
-    if not args.write_iter:
+    # If it wasn't done during EM iterations or posterior adjustments were done at the end, output final results
+    if not args.write_iter or args.post_wait:
         write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
         write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
                          trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start,

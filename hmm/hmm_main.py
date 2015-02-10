@@ -52,12 +52,6 @@ def read_arguments():
 # Viterbi algorithm
 def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
             recomb_adjustment, use_recomb_rates, verbose):
-    import platform
-    print 'platform.node() = ' + str(platform.node())
-
-    import socket
-    print 'socket.gethostname() = ' + str(socket.gethostname())
-
     # Initialize
     prob_nodes = numpy.zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
     ancestors_by_state = {}

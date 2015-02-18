@@ -2,6 +2,8 @@
 #PBS -S /bin/sh
 #PBS -V
 
+###PBS -q long8gb
+
 #PBS -l nodes=1:ppn=20
 #PBS -l pmem=8gb
 #PBS -l walltime=120:00:00

@@ -44,58 +44,37 @@ ils_a()
 iss_e()
 {
 	qsub -v STRAIN=ISS,P="-pw -e .96 -a 1.5 -o _e96a15pw -m 20" -N hmm_ISS_e96a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .96 -a 1.5 -o _e96a15pw -m 20" -N hmm_ISS_e96a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .96 -a 1. -o _e96a10pw -m 20" -N hmm_ISS_e96a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .96 -a 1. -o _e96a10pw -m 20" -N hmm_ISS_e96a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .96 -a .5 -o _e96a5pw -m 20" -N hmm_ISS_e96a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .96 -a .5 -o _e96a5pw -m 20" -N hmm_ISS_e96a5pw ../run_hmm.sh
 	
     qsub -v STRAIN=ISS,P="-pw -e .94 -a 1.5 -o _e94a15pw -m 20" -N hmm_ISS_e94a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1.5 -o _e94a15pw -m 20" -N hmm_ISS_e94a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1. -o _e94a10pw -m 20" -N hmm_ISS_e94a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1. -o _e94a10pw -m 20" -N hmm_ISS_e94a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a .5 -o _e94a5pw -m 20" -N hmm_ISS_e94a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .94 -a .5 -o _e94a5pw -m 20" -N hmm_ISS_e94a5pw ../run_hmm.sh
 }
 
 ils_e()
 {
 	qsub -v STRAIN=ILS,P="-pw -e .96 -a 1.5 -o _e96a15pw -m 20" -N hmm_ILS_e96a15pw ../run_hmm.sh
-	qsub -v STRAIN=ILS,P="-pw -e .96 -a 1.5 -o _e96a15pw -m 20" -N hmm_ILS_e96a15pw ../run_hmm.sh
 	qsub -v STRAIN=ILS,P="-pw -e .96 -a 1. -o _e96a10pw -m 20" -N hmm_ILS_e96a10pw ../run_hmm.sh
-	qsub -v STRAIN=ILS,P="-pw -e .96 -a 1. -o _e96a10pw -m 20" -N hmm_ILS_e96a10pw ../run_hmm.sh
-	qsub -v STRAIN=ILS,P="-pw -e .96 -a .5 -o _e96a5pw -m 20" -N hmm_ILS_e96a5pw ../run_hmm.sh
 	qsub -v STRAIN=ILS,P="-pw -e .96 -a .5 -o _e96a5pw -m 20" -N hmm_ILS_e96a5pw ../run_hmm.sh
 
 	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1.5 -o _e94a15pw -m 20" -N hmm_ISS_e94a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1.5 -o _e94a15pw -m 20" -N hmm_ISS_e94a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1. -o _e94a10pw -m 20" -N hmm_ISS_e94a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a 1. -o _e94a10pw -m 20" -N hmm_ISS_e94a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -e .94 -a .5 -o _e94a5pw -m 20" -N hmm_ISS_e94a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -e .94 -a .5 -o _e94a5pw -m 20" -N hmm_ISS_e94a5pw ../run_hmm.sh
 }
 
 iss_t()
 {
 	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a 1.5 -o _t82u9a15pw -m 20" -N hmm_ISS_t82u9a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a 1.5 -o _t82u9a15pw -m 20" -N hmm_ISS_t82u9a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a 1. -o _t82u9a10pw -m 20" -N hmm_ISS_t82u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a 1. -o _t82u9a10pw -m 20" -N hmm_ISS_t82u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a .5 -o _t82u9a5pw -m 20" -N hmm_ISS_t82u9a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .82 -u .9 -a .5 -o _t82u9a5pw -m 20" -N hmm_ISS_t82u9a5pw ../run_hmm.sh
 	
 	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a 1.5 -o _t64u9a15pw -m 20" -N hmm_ISS_t64u9a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a 1.5 -o _t64u9a15pw -m 20" -N hmm_ISS_t64u9a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a 1. -o _t64u9a10pw -m 20" -N hmm_ISS_t64u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a 1. -o _t64u9a10pw -m 20" -N hmm_ISS_t64u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a .5 -o _t64u9a5pw -m 20" -N hmm_ISS_t64u9a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .64 -u .9 -a .5 -o _t64u9a5pw -m 20" -N hmm_ISS_t64u9a5pw ../run_hmm.sh
 	
     qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a 1.5 -o _t52u9a15pw -m 20" -N hmm_ISS_t52u9a15pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a 1.5 -o _t52u9a15pw -m 20" -N hmm_ISS_t52u9a15pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a 1. -o _t52u9a10pw -m 20" -N hmm_ISS_t52u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a 1. -o _t52u9a10pw -m 20" -N hmm_ISS_t52u9a10pw ../run_hmm.sh
-	qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a .5 -o _t52u9a5pw -m 20" -N hmm_ISS_t52u9a5pw ../run_hmm.sh
 	qsub -v STRAIN=ISS,P="-pw -t .52 -u .9 -a .5 -o _t52u9a5pw -m 20" -N hmm_ISS_t52u9a5pw ../run_hmm.sh
 }
 
@@ -161,7 +140,7 @@ ils_u()
 
 test_run()
 {
-	qsub -v STRAIN=TEST,P="-p" -N hmm_TEST ../run_hmm.sh
+	qsub -v STRAIN=ISS,P="-pw -a 1. -t .64 -u .9 -o _m1test -m 1" -N hmm_TEST ../run_hmm.sh
 }
 
 if [[ $1 == "ALL_C" ]]

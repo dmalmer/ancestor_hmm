@@ -25,7 +25,7 @@ def calc_new_trans_p(ancestors_by_chr, states):
         for s_inner in states:
             tot_trans = float(sum(trans_counts[s_outer].values()))
             new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
-
+            
     return new_trans_p
 
 
@@ -157,7 +157,8 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
                     SNP_counts['Unk'] += 1
                 elif input_strain in SNP[3]:
                     for anc in SNP[3].split('_'):
-                        SNP_counts[anc] += 1
+                        if anc != input_strain:
+                            SNP_counts[anc] += 1
 
             # First, check if haplotype block comes from an unsequenced ancestor 
             if int(SNP_counts['Unk']) > 2 and SNP_counts['Unk'] >= unk_cutoff * SNP_counts[ancestor]:
@@ -172,7 +173,7 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
                 new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
 
         new_ancestors_by_chr[curr_chr] = new_ancestors
-    
+
     return new_ancestors_by_chr
 
 

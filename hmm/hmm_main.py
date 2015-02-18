@@ -296,10 +296,8 @@ if __name__ == "__main__":
         unk_cutoff_range = create_grid_range(args.unk_cutoff, args.grid_size)
         use_auto_str = True
 
-    # Kickoff EM loop across all ranges of parameters, spread out across servers
+    # Kickoff EM loop across all ranges of parameters
     if args.parallel:
-        server_names = ('node-25', 'node-26')
-        #job_server = pp.Server(ppservers=(server_name,))
         job_server = pp.Server()
         em_func = pp.Template(job_server, expectation_maximization, depfuncs=(calc_recomb_rate, get_emit_key, viterbi, 
                               reclassify_ibd_and_unk, calc_new_trans_p, calc_new_emit_p, prob_dist, prob_tuples,
@@ -314,11 +312,6 @@ if __name__ == "__main__":
                 for unk_cutoff in unk_cutoff_range:
                     append_str = '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff) \
                                  if use_auto_str else args.append_str
-                    #if args.parallel:
-                    #    job = em_func.submit(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str,
-                    #                         job_server, vit_func)
-                    #    job()
-                    #else:
                     expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str,
                                              job_server, vit_func)
                     

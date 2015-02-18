@@ -62,8 +62,9 @@ if __name__ == "__main__":
                 mice_distrb_indv[curr_chr]['IBD'] += (int(spl[2])-int(spl[1])) 
                 mice_distrb_aggr['IBD'] += (int(spl[2])-int(spl[1]))
                 for anc in spl[3].split('_'):
-                    mice_distrb_indv_ibd[curr_chr][anc] += (int(spl[2])-int(spl[1])) 
-                    mice_distrb_aggr_ibd[anc] += (int(spl[2])-int(spl[1]))
+                    if anc not in ('ILS', 'ISS'):
+                        mice_distrb_indv_ibd[curr_chr][anc] += (int(spl[2])-int(spl[1])) 
+                        mice_distrb_aggr_ibd[anc] += (int(spl[2])-int(spl[1]))
             else:
                 mice_distrb_indv[curr_chr][spl[3]] += (int(spl[2])-int(spl[1]))
                 mice_distrb_aggr[spl[3]] += (int(spl[2])-int(spl[1]))

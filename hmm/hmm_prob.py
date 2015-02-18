@@ -25,7 +25,7 @@ def calc_new_trans_p(ancestors_by_chr, states):
         for s_inner in states:
             tot_trans = float(sum(trans_counts[s_outer].values()))
             new_trans_p[s_outer][s_inner] = log(trans_counts[s_outer][s_inner] / tot_trans)
-            
+
     return new_trans_p
 
 
@@ -165,9 +165,9 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cuto
                 new_ancestors.extend(['Unk'] * len(SNPs_section))
 
             # If not, check if classified ancestor is IBD
-            else:
+            elif ancestor != 'Unk':
                 # Find all other ancestors with counts >= the classified ancestor count
-                indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor]]
+                indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor] and k != 'Unk']
 
                 # Add all IBD ancestors to back of classified ancestor
                 new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))

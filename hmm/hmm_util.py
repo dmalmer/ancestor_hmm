@@ -57,6 +57,21 @@ def get_emit_key(state, SNPs_str, input_strain):
         return '~' + state
 
 
+# Get all unique states from SNP data
+def get_states(SNPs_by_chr, input_strain, use_unk):
+    states = []
+    for v in SNPs_by_chr.values():
+        for SNPs in v:
+            for anc in SNPs[3].split('_'):
+                if anc != input_strain and anc not in states:
+                    states.append(anc)
+
+    if use_unk:
+        states.append('Unk')
+    
+    return states
+
+
 # Find log(A+B) when A and B are in log-space
 #  (taken from https://facwiki.cs.byu.edu/nlp/index.php/Log_Domain_Computations)
 def log_add_pair(log_A, log_B):
@@ -91,14 +106,12 @@ def pairwise(iterable):
 
 # Return dictionary of probability tuples to be used in print statements
 def prob_tuples(probs):
-    ret_dict = {}
+    prob_dict = defaultdict(list)
     for s in probs.keys():
-        prob_list = [s]
         for k, v in probs[s].items():
-            prob_list.extend([k, e ** v])
-        ret_dict[s] = tuple(prob_list)
+            prob_dict[s].append((k, e ** v))
 
-    return ret_dict
+    return prob_dict
 
 
 # Read in recombination rates data

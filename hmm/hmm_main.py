@@ -12,7 +12,8 @@ from time import time
 from hmm_output import write_ancestors, write_scores, write_statistics
 from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, reclassify_ibd_and_unk, \
                      score_results
-from hmm_util import atof, create_grid_range, get_emit_key, prob_tuples, read_recomb_rates, read_SNPs, read_SVs
+from hmm_util import atof, create_grid_range, get_emit_key, get_states, prob_tuples, read_recomb_rates, read_SNPs, \
+                     read_SVs
 
 
 # Arguments
@@ -108,11 +109,12 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
 
 
 # Expectation-Maximization loop
-def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str, job_server=None, vit_func=None):
+def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str, 
+                             job_server=None, vit_func=None):
     # Start, transition, and emission probabilities
     trans_p = {s_outer: {s_inner: log(trans_in_p) if s_inner == s_outer else log((1 - trans_in_p) / 6)
-                         for s_inner in STATES} for s_outer in STATES}
-    emit_p = {s: {s: log(emit_same_p), '~'+s: log(1 - emit_same_p)} for s in STATES}
+                         for s_inner in states} for s_outer in states}
+    emit_p = {s: {s: log(emit_same_p), '~'+s: log(1 - emit_same_p)} for s in states}
 
     # EM loop
     tot_prob_dist = 10.
@@ -128,7 +130,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
         if args.parallel:
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
-                job = vit_func.submit(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
+                job = vit_func.submit(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
                                       NUM_GENERATIONS, adjust_recomb, args.use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
 
@@ -140,7 +142,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
                 job_server.print_stats()
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
-                ancestors_by_chr[curr_chr] = viterbi(SNPs, STATES, trans_p, emit_p, input_strain, recomb_rate_dict,
+                ancestors_by_chr[curr_chr] = viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict,
                                                      EFFECTIVE_POP, NUM_GENERATIONS, adjust_recomb,
                                                      args.use_recomb_rates, args.verbose)
 
@@ -150,32 +152,44 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
             ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cutoff)
 
         # Recalculate transition and emission probabilities
-        new_trans_p = calc_new_trans_p(ancestors_by_chr, STATES)
+        new_trans_p = calc_new_trans_p(ancestors_by_chr, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
 
-        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, STATES, input_strain, emit_same_p)
+        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, emit_same_p)
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
 
         if args.verbose:
             print 'Transition probabilities'
             print '  Before:'
             tuples_dict = prob_tuples(trans_p)
-            for s in STATES:
-                print '    %s -> %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f' % tuples_dict[s]
+            for s in states:
+                print '    %s ->' % s,
+                for tup in tuples_dict[s]:
+                    print '%s: %.2f,' % tup,
+                print ''
             print '  After:'
             tuples_dict = prob_tuples(new_trans_p)
-            for s in STATES:
-                print '    %s -> %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f, %s: %.2f' % tuples_dict[s]
+            for s in states:
+                print '    %s ->' % s,
+                for tup in tuples_dict[s]:
+                    print '%s: %.2f,' % tup,
+                print ''
 
-            print 'Emission probabilities'
+            print '\nEmission probabilities'
             print '  Before:'
             tuples_dict = prob_tuples(emit_p)
-            for s in STATES:
-                print '    %s -> %s: %.2f, %s: %.2f' % tuples_dict[s]
+            for s in states:
+                print '    %s ->' % s,
+                for tup in tuples_dict[s]:
+                    print '%s: %.2f,' % tup,
+                print ''
             print '  After:'
             tuples_dict = prob_tuples(new_emit_p)
-            for s in STATES:
-                print '    %s -> %s: %.2f, %s: %.2f' % tuples_dict[s]
+            for s in states:
+                print '    %s ->' % s,
+                for tup in tuples_dict[s]:
+                    print '%s: %.2f,' % tup,
+                print ''
 
             print 'Total probability distance: %.3f' % tot_prob_dist
 
@@ -238,7 +252,7 @@ def expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff,
 
 
 # Main method
-if __name__ == "__main__":
+if __name__ == '__main__':
     # Start timer
     time_start = time()
 
@@ -250,15 +264,14 @@ if __name__ == "__main__":
     except KeyError:
         pass
 
-    STATES = ('Unk', 'A', 'AKR', 'BALBc', 'C3HHe', 'C57BL6N', 'DBA2')
-    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51',
-                  'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
-
     EFFECTIVE_POP = 1  # effective population (N_e) for recombination rate calculations
     NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
 
+    STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51',
+                  'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
+    
     # Read in arguments
     args = read_arguments()
     input_strain = args.input_file.strip().rsplit('/',1)[1].split('_')[0] \
@@ -268,6 +281,8 @@ if __name__ == "__main__":
 
     # Read in data
     SNPs_by_chr = read_SNPs(args.input_file)
+    states = get_states(SNPs_by_chr, input_strain, True)
+
     recomb_rate_dict = {}
     if args.use_recomb_rates:
         recomb_rate_dict = read_recomb_rates(WORKING_DIR + 'data/mouse_recomb_rates.csv')
@@ -303,7 +318,7 @@ if __name__ == "__main__":
                               reclassify_ibd_and_unk, calc_new_trans_p, calc_new_emit_p, prob_dist, prob_tuples,
                               score_results, write_ancestors, write_statistics, write_scores))
         vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
-                            modules=('numpy', 'math'))
+                               modules=('numpy', 'math'))
     
     i = 0
     for trans_in_p in trans_in_p_range:
@@ -312,8 +327,8 @@ if __name__ == "__main__":
                 for unk_cutoff in unk_cutoff_range:
                     append_str = '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff) \
                                  if use_auto_str else args.append_str
-                    expectation_maximization(trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str,
-                                             job_server, vit_func)
+                    expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args,
+                                             append_str, job_server, vit_func)
                     
                     i += 1
 

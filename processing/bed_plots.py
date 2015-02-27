@@ -12,6 +12,9 @@
 # python bed_plots.py ISS filt-anc <unique-name>
 # python bed_plots.py ILS filt-anc <unique-name>
 
+# python bed_plots.py ISS rmC57 <unique-name>
+# python bed_plots.py ILS rmC57 <unique-name>
+
 import sys
 import pylab
 from collections import defaultdict
@@ -28,6 +31,8 @@ if __name__ == "__main__":
         snp_type = 'sh-nsh_full'
     elif sys.argv[2].lower() == 'filt-anc':
         snp_type = 'sh-nsh_filt-anc_full'
+    elif sys.argv[2].lower() == 'rmc57':
+        snp_type = 'sh-nsh_filt-anc_rmC57_full'
     else:
         raise Exception('Bad inputs. See comments at top of script for correct usage.')
 

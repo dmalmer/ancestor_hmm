@@ -314,9 +314,6 @@ if __name__ == '__main__':
     # Kickoff EM loop across all ranges of parameters
     if args.parallel:
         job_server = pp.Server()
-        em_func = pp.Template(job_server, expectation_maximization, depfuncs=(calc_recomb_rate, get_emit_key, viterbi, 
-                              reclassify_ibd_and_unk, calc_new_trans_p, calc_new_emit_p, prob_dist, prob_tuples,
-                              score_results, write_ancestors, write_statistics, write_scores))
         vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
                                modules=('numpy', 'math'))
     

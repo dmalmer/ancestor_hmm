@@ -317,7 +317,6 @@ if __name__ == '__main__':
         vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
                                modules=('numpy', 'math'))
     
-    i = 0
     for trans_in_p in trans_in_p_range:
         for emit_same_p in emit_same_p_range:
             for adjust_recomb in adjust_recomb_range:
@@ -326,8 +325,6 @@ if __name__ == '__main__':
                                  if use_auto_str else args.append_str
                     expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args,
                                              append_str, job_server, vit_func)
-                    
-                    i += 1
 
     if args.parallel:
         job_server.wait()

@@ -18,6 +18,9 @@ import sys
 if __name__ == "__main__":
     strain = sys.argv[1]
 
+    print sys.argv[1]
+    print sys.argv[2]
+
     if sys.argv[2].lower() == 'full':
         snp_type = 'Full'
     elif sys.argv[2].lower() == 'unique':
@@ -26,6 +29,8 @@ if __name__ == "__main__":
         snp_type = 'sh-nsh_full'
     elif sys.argv[2].lower() == 'filt-anc':
         snp_type = 'sh-nsh_filt-anc_full'
+    elif sys.argv[2].lower() == 'rmc57':
+        snp_type = 'sh-nsh_filt-anc_rmC57_full'
 
     anc_RGBs = {strain: '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51', 'C3HHe': '255,153,51',
                 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'not_shared': '0,0,0'}

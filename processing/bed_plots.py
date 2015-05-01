@@ -17,6 +17,8 @@
 
 import sys
 import pylab
+import matplotlib
+matplotlib.use('Agg')
 from collections import defaultdict
 
 if __name__ == "__main__":
@@ -78,6 +80,13 @@ if __name__ == "__main__":
             total_recomb += 1
 
     print 'total recombinations: ' + str(total_recomb)
+    tot = 0.
+    for anc in mice_distrb_aggr:
+        if anc != 'IBD':
+            tot += mice_distrb_aggr[anc] + mice_distrb_aggr_ibd[anc]
+    print '  total area: ' + str(tot)
+    for anc in mice_distrb_aggr_ibd:
+        print '  %s: %f' % (anc, (mice_distrb_aggr[anc] + mice_distrb_aggr_ibd[anc]) / tot)
 
     # Hard code colors to match WashU genome viewer
     mice_colors = {
@@ -91,22 +100,39 @@ if __name__ == "__main__":
         'IBD'       : '#99FFFF' #teal
     }
 
+    mice_distrb_aggr_combined = defaultdict(float) 
+    for anc in mice_distrb_aggr_ibd:
+        mice_distrb_aggr_combined[anc] += mice_distrb_aggr_ibd[anc]
+        mice_distrb_aggr_combined[anc] += mice_distrb_aggr[anc]
+    print mice_distrb_aggr_combined
+
+    # Genome-wide
+    #   Combined (Non-IBD + indv anc in IBD)
+    pylab.figure(figsize=(6,6), facecolor='white')
+    patches, texts = pylab.pie(mice_distrb_aggr_combined.values(), explode=None,
+              shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr_combined.keys()))
+    #pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Genome-Wide Ancestor Distributions')
+    pylab.title('Results distributions - combined indv and IBD')
+    pylab.savefig(strain + '_all_combined.png')
+
     # Genome-wide
     #   Non-IBD
     pylab.figure(figsize=(6,6), facecolor='white')
-    patches, texts = pylab.pie(mice_distrb_aggr.values(), explode=None, labels=mice_distrb_aggr.keys(), #autopct='%1.1f%%',
-              shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr.keys()), labeldistance=0.65)
-    pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Genome-Wide Ancestor Distributions')
+    patches, texts = pylab.pie(mice_distrb_aggr.values(), explode=None, #labels=mice_distrb_aggr.keys(), #autopct='%1.1f%%',
+              shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr.keys()), labeldistance=0.65, startangle=280)
+    #pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Genome-Wide Ancestor Distributions')
     for t in texts:
         t.set_horizontalalignment('center')
+    pylab.savefig(strain + '_all_full.svg')
     
     #   IBD
     pylab.figure(figsize=(6,6), facecolor='white')
-    patches, texts = pylab.pie(mice_distrb_aggr_ibd.values(), explode=None, labels=mice_distrb_aggr_ibd.keys(), #autopct='%1.1f%%',
+    patches, texts = pylab.pie(mice_distrb_aggr_ibd.values(), explode=None, #labels=mice_distrb_aggr_ibd.keys(), #autopct='%1.1f%%',
               shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_aggr_ibd.keys()), labeldistance=0.65)
-    pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - IBD - HMM - Genome-Wide Ancestor Distributions')
+    #pylab.title(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - IBD - HMM - Genome-Wide Ancestor Distributions')
     for t in texts:
         t.set_horizontalalignment('center')
+    pylab.savefig(strain + '_all_IBD.svg')
 
     # Individual chromosomes
     #   Non-IBD
@@ -118,8 +144,9 @@ if __name__ == "__main__":
         pylab.pie(mice_distrb_indv[curr_chr].values(), explode=None, #labels=mice_distrb_indv[curr_chr].keys(), autopct='%1.1f%%',  
                   shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_indv[curr_chr].keys()))
         pylab.title(curr_chr)
-    pylab.suptitle(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Chromosome-Wide Ancestor Distributions')
+    #pylab.suptitle(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - HMM - Chromosome-Wide Ancestor Distributions')
     #pylab.legend(miceColors.keys(),loc=6)
+    pylab.savefig(strain + '_indv_full.svg')
     
     #   IBD
     pylab.figure(facecolor='white')
@@ -130,7 +157,7 @@ if __name__ == "__main__":
         pylab.pie(mice_distrb_indv_ibd[curr_chr].values(), explode=None, #labels=mice_distrb_indv_ibd[curr_chr].keys(), autopct='%1.1f%%',  
                   shadow=True, colors=map(lambda x: mice_colors[x], mice_distrb_indv_ibd[curr_chr].keys()))
         pylab.title(curr_chr)
-    pylab.suptitle(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - IBD - HMM - Chromosome-Wide Ancestor Distributions')
+    #pylab.suptitle(sys.argv[2][0].upper() + sys.argv[2][1:].lower() + ' ' + strain + ' - IBD - HMM - Chromosome-Wide Ancestor Distributions')
     #pylab.legend(miceColors.keys(),loc=6)
+    pylab.savefig(strain + '_indv_IBD.svg')
 
-    pylab.show()

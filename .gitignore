@@ -3,11 +3,15 @@
 *.bed
 *.txt
 *.idx
+*.svg
+*.png
 
 old/*
 paper/*
 results/*
 igv/*
+acmbcb/*
+other/*
 
 deploy*.sh
 retrieve*.sh

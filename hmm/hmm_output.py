@@ -7,9 +7,9 @@ from hmm_util import ancestor_blocks, natural_keys
 
 
 # Write ancestor classifications to a .bed file
-def write_ancestors(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, state_RGBs):
-    with open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_hmm-out' + unique_output_name +
-                    '.' + filename_in.rsplit('.', 1)[1], 'w') as f_out:
+def write_ancestors(working_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, state_RGBs):
+    extension = '' if '.' not in filename_in else '.' + filename_in.rsplit('.', 1)[1]
+    with open(working_dir + filename_in.rsplit('.', 1)[0] + '_hmm-out' + append_str + extension, 'w') as f_out:
         for curr_chr in sorted(ancestors_by_chr.keys(), key=natural_keys):
             for pos_start, pos_end, ancestor in ancestor_blocks(ancestors_by_chr[curr_chr], SNPs_by_chr[curr_chr]):
                 color_key = ancestor
@@ -25,23 +25,23 @@ def write_ancestors(working_dir, filename_in, unique_output_name, ancestors_by_c
 
 
 # Write hits and misses to a .bed file
-def write_scores(working_dir, filename_in, unique_output_name, all_scores_by_chr):
-    with open(working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_scores' + unique_output_name +
-                    '.' + filename_in.rsplit('.', 1)[1], 'w') as f_out:
+def write_scores(working_dir, filename_in, append_str, all_scores_by_chr):
+    extension = '' if '.' not in filename_in else '.' + filename_in.rsplit('.', 1)[1]
+    with open(working_dir + filename_in.rsplit('.', 1)[0] + '_scores' + append_str + extension, 'w') as f_out:
         for curr_chr in sorted(all_scores_by_chr.keys(), key=natural_keys):
             for score in all_scores_by_chr[curr_chr]:
-                color = '51,255,51' if score[4] == 'Hit' else '255,51,51'
+                color = '51,255,51' if score[3] == 'Hit' else '255,51,51'
                 f_out.write('{0}\t{1}\t{2}\t{3}\t0\t+\t{1}\t{2}\t{4}\n'.format(
                     curr_chr,  # {0} - chromosome
                     score[0],  # {1} - start pos
                     score[1],  # {2} - end pos
-                    score[4],  # {3} - 'Hit' or 'Miss'
+                    score[3],  # {3} - 'Hit' or 'Miss'
                     color  # {4} - green for hit, red for miss
                 ))
 
 
 # Write statistics of each run out to a file
-def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_chr, SNPs_by_chr, starting_params,
+def write_statistics(working_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, starting_params,
                      final_score, run_count, tot_run_time, final_prob_dist):
     len_before = 0
     for SNPs in SNPs_by_chr.values():
@@ -81,8 +81,7 @@ def write_statistics(working_dir, filename_in, unique_output_name, ancestors_by_
                 starting_params[4],  # {6} - final emit_p
             )
 
-    filename_out = working_dir + '/results/' + filename_in.rsplit('.', 1)[0] + '_stats' + unique_output_name + \
-                   '.txt'
+    filename_out = working_dir + filename_in.rsplit('.', 1)[0] + '_stats' + append_str + '.txt'
     if not isfile(filename_out):
         header = '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t' \
                  '{18}\t{19}\n'.format(

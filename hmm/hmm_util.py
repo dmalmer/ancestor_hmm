@@ -47,23 +47,23 @@ def create_grid_range(input_params, grid_size):
 
 
 # Return the emit key
-def get_emit_key(state, SNPs_str, input_strain):
-    if state == 'Unk' and SNPs_str == input_strain:
+def get_emit_key(state, SNPs_str, desc_strain):
+    if state == 'Unk' and SNPs_str == desc_strain:
         return state
     SNPs = SNPs_str.split('_')
-    if (input_strain in SNPs and state in SNPs) or (input_strain not in SNPs and state not in SNPs):
+    if (desc_strain in SNPs and state in SNPs) or (desc_strain not in SNPs and state not in SNPs):
         return state
     else:
         return '~' + state
 
 
 # Get all unique states from SNP data
-def get_states(SNPs_by_chr, input_strain, use_unk):
+def get_states(SNPs_by_chr, desc_strain, use_unk):
     states = []
     for v in SNPs_by_chr.values():
         for SNPs in v:
             for anc in SNPs[3].split('_'):
-                if anc != input_strain and anc not in states:
+                if anc != desc_strain and anc not in states:
                     states.append(anc)
 
     if use_unk:
@@ -154,46 +154,62 @@ def read_SNPs(filename):
 
 
 # Read in structural variant files
-def read_SVs(strain_SV_filename, anc_ins_filename, anc_del_filename):
+def read_SVs(anc_ins_filename, anc_del_filename, states, desc_strain):
     # Divide SV data into dictionaries by chromosome
-    #  Read ISS or ILS SVs
-    strain_SVs_by_chr = defaultdict(list)
-    with open(strain_SV_filename, 'r') as f:
-        f.readline()
-        line = f.readline()
-        while line != '':
-            cols = line.split('\t')
-            strain_SVs_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
-
-            line = f.readline()
-
-    for SVs in strain_SVs_by_chr.values():
-        SVs.sort()
-
-    #  Read individual ancestor insertions
+    #  Read individual insertions, separate descendant insertions from ancestor insertions
+    desc_ins_by_chr = defaultdict(list)
     anc_ins_by_chr = defaultdict(list)
     with open(anc_ins_filename, 'r') as f:
         line = f.readline().strip()
         while line != '':
             cols = line.split('\t')
-            anc_ins_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
+
+            ancestors = []
+            has_desc = False
+            for s in cols[3].split('_'):
+                if s in states:
+                    ancestors.append(s)
+                elif s == desc_strain:
+                    has_desc = True
+            if len(ancestors) > 0:
+                anc_ins_by_chr[cols[0]].append((int(cols[1]), int(cols[2]), ancestors))
+            if has_desc:
+                desc_ins_by_chr[cols[0]].append((int(cols[1]), int(cols[2])))
 
             line = f.readline().strip()
 
+    #  Sort by start pos
+    for insertions in desc_ins_by_chr.values():
+        insertions.sort(key=lambda x: x[0])
     for insertions in anc_ins_by_chr.values():
-        insertions.sort()
+        insertions.sort(key=lambda x: x[0])
 
-    #  Read individual ancestor deletions
+    #  Read individual deletions, separate descendant deletions from ancestor deletions
+    desc_del_by_chr = defaultdict(list)
     anc_del_by_chr = defaultdict(list)
     with open(anc_del_filename, 'r') as f:
         line = f.readline().strip()
         while line != '':
             cols = line.split('\t')
-            anc_del_by_chr[cols[0]].append([int(cols[1]), int(cols[2]), cols[3]])
+
+            ancestors = []
+            has_desc = False
+            for s in cols[3].split('_'):
+                if s in states:
+                    ancestors.append(s)
+                elif s == desc_strain:
+                    has_desc = True
+            if len(ancestors) > 0:
+                anc_del_by_chr[cols[0]].append((int(cols[1]), int(cols[2]), ancestors))
+            if has_desc:
+                desc_del_by_chr[cols[0]].append((int(cols[1]), int(cols[2])))
 
             line = f.readline().strip()
 
+    #  Sort by start pos
+    for deletions in desc_del_by_chr.values():
+        deletions.sort(key=lambda x: x[0])
     for deletions in anc_del_by_chr.values():
-        deletions.sort()
+        deletions.sort(key=lambda x: x[0])
 
-    return (strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr)
+    return (desc_ins_by_chr, desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr)

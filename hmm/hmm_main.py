@@ -5,44 +5,63 @@ import numpy
 import pp
 import sys
 
+from datetime import datetime
 from math import log
 from os import environ
 from time import time
 
 from hmm_output import write_ancestors, write_scores, write_statistics
-from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, reclassify_ibd_and_unk, \
-                     score_results
-from hmm_util import atof, create_grid_range, get_emit_key, get_states, prob_tuples, read_recomb_rates, read_SNPs, \
-                     read_SVs
+from hmm_prob import calc_new_emit_p, calc_new_trans_p, calc_recomb_rate, prob_dist, reclassify_ibd_and_unk, score_results
+from hmm_util import atof, create_grid_range, get_emit_key, get_states, prob_tuples, read_recomb_rates, read_SNPs, read_SVs
 
 
 # Arguments
 def read_arguments():
-    parser = argparse.ArgumentParser(add_help=True)
-    parser.add_argument('-i', '--input-file', help='Input SNP data file', type=str, required=True)
+    parser = argparse.ArgumentParser(add_help=True, formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument('-i', '--input-file', help='Input SNP data file (BED file format)', type=str, required=True)
+    parser.add_argument('-d', '--desc-strain', help='Name of descendant in input SNP file', type=str,
+                        required=True)
+    parser.add_argument('-o', '--output-dir', help='Directory for output files (if not specified, output directory will '
+                                                   'default to the same directory as the input file)', type=str)
 
-    parser.add_argument('-t', '--trans-in-p', help='Starting trans-in probability', type=atof, default=.94)
-    parser.add_argument('-e', '--emit-same-p', help='Starting emit-same probability', type=atof, default=.99)
+    parser.add_argument('-t', '--trans-in-p', help='Starting trans-in probability (can be a value or range of values in '
+                                                   'the form "[x-y]", which is divided into parts with the -gs flag)',
+                                                   type=atof, default=.64)
+    parser.add_argument('-e', '--emit-same-p', help='Starting emit-same probability (can be a value or range of values '
+                                                    'in the form "[x-y]", which is divided into parts with the -gs flag)',
+                                                    type=atof, default=.99)
     parser.add_argument('-m', '--max-iter', help='Maximum number of EM iterations', type=int, default=50)
 
     parser.add_argument('-p', '--parallel', help='Run viterbi algorithm over each chromosome in parallel',
                         action='store_true')
 
-    parser.add_argument('-r', '--use-recomb-rates', help='Incorporate recombination rates as priors for transition '
-                                                         'probabilities', action='store_true')
-    parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations',
-                        type=atof, default=1.)
+    parser.add_argument('-r', '--recomb-rates-file', help='Input file with recombination rates to be used as priors for '
+                                                          'transition probabilities', type=str)
+    parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations (can be a '
+                                                      'value or range of values in the form "[x-y]", which is divided '
+                                                      'into parts with the -gs flag)', type=atof, default=1.)
     parser.add_argument('-u', '--unk-cutoff', help='Cutoff for fraction of Unk SNPs required for an ancestor block to '
-                                                   'be relabeled as Unk', type=atof, default=1.)
-    parser.add_argument('-pw', '--post-wait', help='Wait until the end of the EM loops to run the posterior '
-                                                   'calculations for Unk cutoff and IBD regions', action='store_true')
+                                                   'be relabeled as Unk (can be a value or range of values in the form '
+                                                   '"[x-y]", which is divided into parts with the -gs flag)', type=atof,
+                                                   default=1.)
 
-    parser.add_argument('-g', '--grid-size', help='Number of items to divide a range of input values into', type=int,
+    parser.add_argument('-ep', '--effective-pop', help='Effective population (N_e) used in recombination rate '
+                                                       'calculations', type=int, default=1)
+    parser.add_argument('-ng', '--num-generations', help='Estimated number of generations between ancestors and '
+                                                         'descendant used in recombation rate calculations', type=int,
+                                                         default=1)
+
+    parser.add_argument('-si', '--sv-insertions-file', help='Input file for insertion structural variants used to score '
+                                                            'HMM results', type=str)
+    parser.add_argument('-sd', '--sv-deletions-file', help='Input file for deletion structural variants used to score '
+                                                            'HMM results', type=str)
+
+    parser.add_argument('-gs', '--grid-size', help='Number of items to divide a range of input values into', type=int,
                         default=2)
 
-    parser.add_argument('-d', '--append-date', help='Append date to output filename', action='store_true')
-    parser.add_argument('-o', '--append-str', help='Append custom string to output filename, or choose \'auto\' to '
-                                                   'append string based on the input parameters', type=str, default='')
+    parser.add_argument('-ad', '--append-date', help='Append date to output filename', action='store_true')
+    parser.add_argument('-ap', '--append-params', help='Append string to output filename based on the input parameters',
+                        action='store_true')
     parser.add_argument('-w', '--write-iter', help='Calculate scores and write to output file at each iteration within '
                                                    'the EM loop', action='store_true')
     parser.add_argument('-v', '--verbose', help='Verbose', action='store_true')
@@ -51,7 +70,7 @@ def read_arguments():
 
 
 # Viterbi algorithm
-def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effective_pop, num_generations,
+def viterbi(SNPs, states, trans_p, emit_p, desc_strain, recomb_rate_dict, effective_pop, num_generations,
             recomb_adjustment, use_recomb_rates, verbose):
     # Initialize
     prob_nodes = numpy.zeros(len(SNPs), dtype={'names': states, 'formats': ['f8']*len(states)})
@@ -61,7 +80,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
     # Start probabilities
     for s in states:
         # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-        emit_key = get_emit_key(s, SNPs[0][3], input_strain)
+        emit_key = get_emit_key(s, SNPs[0][3], desc_strain)
         # Probability of a given state at SNPs[0] is emit prob of stat
         prob_nodes[0][s] = emit_p[s][emit_key]
         ancestors_by_state[s] = [s]
@@ -83,7 +102,7 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
         # At every SNP, find probabilities for each state
         for curr_state in states:
             # For each state, the emission probability is either emit_p[state] or emit_p[~state]
-            emit_key = get_emit_key(curr_state, SNPs[i][3], input_strain)
+            emit_key = get_emit_key(curr_state, SNPs[i][3], desc_strain)
 
             # The probability of a given state for a given SNP is the maximum out of ((prob prev_state) *
             #  (prob trans prev_state -> curr_state) * (prob emit curr_state)) for all previous states
@@ -109,8 +128,9 @@ def viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, effec
 
 
 # Expectation-Maximization loop
-def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args, append_str, 
-                             job_server=None, vit_func=None):
+def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, use_recomb_rates,
+                             desc_ins_by_chr, desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr, args,
+                             output_dir, append_str, job_server, vit_func):
     # Start, transition, and emission probabilities
     trans_p = {s_outer: {s_inner: log(trans_in_p) if s_inner == s_outer else log((1 - trans_in_p) / 6)
                          for s_inner in states} for s_outer in states}
@@ -130,8 +150,8 @@ def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk
         if args.parallel:
             jobs = []
             for curr_chr, SNPs in SNPs_by_chr.items():
-                job = vit_func.submit(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict, EFFECTIVE_POP,
-                                      NUM_GENERATIONS, adjust_recomb, args.use_recomb_rates, args.verbose)
+                job = vit_func.submit(SNPs, states, trans_p, emit_p, args.desc_strain, recomb_rate_dict, args.effective_pop,
+                                      args.num_generations, adjust_recomb, use_recomb_rates, args.verbose)
                 jobs.append((curr_chr, job))
 
             for curr_chr, job in jobs:
@@ -142,20 +162,15 @@ def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk
                 job_server.print_stats()
         else:
             for curr_chr, SNPs in SNPs_by_chr.items():
-                ancestors_by_chr[curr_chr] = viterbi(SNPs, states, trans_p, emit_p, input_strain, recomb_rate_dict,
-                                                     EFFECTIVE_POP, NUM_GENERATIONS, adjust_recomb,
-                                                     args.use_recomb_rates, args.verbose)
-
-        # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
-        #  ancestors are identical
-        if not args.post_wait:
-            ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cutoff)
+                ancestors_by_chr[curr_chr] = viterbi(SNPs, states, trans_p, emit_p, args.desc_strain, recomb_rate_dict,
+                                                     args.effective_pop, args.num_generations, adjust_recomb,
+                                                     use_recomb_rates, args.verbose)
 
         # Recalculate transition and emission probabilities
         new_trans_p = calc_new_trans_p(ancestors_by_chr, states)
         tot_prob_dist += prob_dist(trans_p, new_trans_p)
 
-        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, input_strain, emit_same_p)
+        new_emit_p = calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, args.desc_strain, emit_same_p)
         tot_prob_dist += prob_dist(emit_p, new_emit_p)
 
         if args.verbose:
@@ -196,59 +211,65 @@ def expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk
         # If set, write out results at each iteration
         if args.write_iter:
             # Score results
-            hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr,
-                                                                          strain_SVs_by_chr, anc_ins_by_chr,
-                                                                          anc_del_by_chr)
+            final_score = -1
+            if len(desc_ins_by_chr) > 0:
+                hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr,
+                                                                              desc_ins_by_chr, desc_del_by_chr,
+                                                                              anc_ins_by_chr, anc_del_by_chr)
+                try:
+                    final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
+                except ZeroDivisionError:
+                    final_score = -1
 
-            try:
-                final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
-            except ZeroDivisionError:
-                final_score = -1
+                # Output scores
+                write_scores(output_dir, filename_in, append_str, all_scores_by_chr)
 
-            # Output results
-            write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
-            write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr,
-                             (args.use_recomb_rates, trans_in_p, emit_same_p, trans_p, emit_p),
-                             final_score, run_count, time() - time_start, tot_prob_dist)
-            write_scores(WORKING_DIR, filename_in, append_str, all_scores_by_chr)
+            # Output results (results during EM iterations will not have reclassified IBD and Unk)
+            write_ancestors(output_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
+            write_statistics(output_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr,
+                             (use_recomb_rates, trans_in_p, emit_same_p, trans_p, emit_p), final_score,
+                             run_count, time() - time_start, tot_prob_dist)
 
         trans_p = new_trans_p
         emit_p = new_emit_p
 
         run_count += 1
 
-    # If it wasn't done during EM iterations, reclassify Unk and IBD regions
-    if args.post_wait:
-        ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, input_strain, unk_cutoff)
-
-    # Score results
-    hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, strain_SVs_by_chr,
-                                                                  anc_ins_by_chr, anc_del_by_chr)
-    try:
-        final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
-    except ZeroDivisionError:
-        final_score = -1
+    # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
+    #  ancestors are identical
+    ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, args.desc_strain, unk_cutoff)
 
     print '\nTotal time (min): ' + str((time() - time_start)/60)
     print 'Total runs: ' + str(run_count)
 
-    print '\nChromosome scores:'
-    for curr_chr in hits_by_chr.keys():
+    # Score results
+    final_score = -1
+    if len(desc_ins_by_chr) > 0:
+        hits_by_chr, misses_by_chr, all_scores_by_chr = score_results(ancestors_by_chr, SNPs_by_chr, desc_ins_by_chr,
+                                                                      desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr)
         try:
-            chr_score = hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr])
+            final_score = sum(hits_by_chr.values())/float(sum(misses_by_chr.values()))
         except ZeroDivisionError:
-            chr_score = -1
-        print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
-                                                           chr_score)
-    print 'Final score: %.3f' % (final_score)
+            final_score = -1
 
-    # If it wasn't done during EM iterations or posterior adjustments were done at the end, output final results
-    if not args.write_iter or args.post_wait:
-        write_ancestors(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
-        write_statistics(WORKING_DIR, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, (args.use_recomb_rates,
-                         trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start,
-                         tot_prob_dist)
-        write_scores(WORKING_DIR, filename_in, append_str, all_scores_by_chr)
+        print '\nChromosome scores:'
+        for curr_chr in hits_by_chr.keys():
+            try:
+                chr_score = hits_by_chr[curr_chr]/float(misses_by_chr[curr_chr])
+            except ZeroDivisionError:
+                chr_score = -1
+            print ' %s - Hits: %i, Misses: %i, Ratio: %.3f' % (curr_chr, hits_by_chr[curr_chr], misses_by_chr[curr_chr],
+                                                               chr_score)
+        print 'Final score: %.3f' % (final_score)
+
+        # Output scores
+        write_scores(output_dir, filename_in, append_str, all_scores_by_chr)
+
+    # Output final results after reclassifying IBD and Unk
+    write_ancestors(output_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, STATE_RGBS)
+    write_statistics(output_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, (use_recomb_rates,
+                     trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - time_start,
+                     tot_prob_dist)
 
 
 # Main method
@@ -257,15 +278,6 @@ if __name__ == '__main__':
     time_start = time()
 
     # Constants
-    WORKING_DIR = '../'
-    try:
-        if 'pando' in environ['PBS_O_HOST'] or 'vieques' in environ['PBS_O_HOST']:
-            WORKING_DIR = '/Users/dama9282/AncestorInference/'
-    except KeyError:
-        pass
-
-    EFFECTIVE_POP = 1  # effective population (N_e) for recombination rate calculations
-    NUM_GENERATIONS = 25  # number of generations between ancestors and ILS/ISS strains
     MAX_EMIT_SAME_RATE = .99  # maximum allowed emit-same rate
     PROB_DIST_CUTOFF = .01  # prob dist threshold for ending EM loop
 
@@ -274,22 +286,32 @@ if __name__ == '__main__':
     
     # Read in arguments
     args = read_arguments()
-    input_strain = args.input_file.strip().rsplit('/',1)[1].split('_')[0] \
-                   if args.input_file.strip().rsplit('/',1)[1].split('_')[0] != 'TEST' else 'ISS' #ILS or ISS
-    filename_in = args.input_file.rsplit('/', 1)[1]
-    use_auto_str = True if args.append_str.lower() in ('auto', 'automatic') else False
+    if '/' in args.input_file:
+        filename_in = args.input_file.rsplit('/', 1)[1]
+        output_dir = args.output_dir if args.output_dir else args.input_file.rsplit('/', 1)[0] + '/'
+    else:
+        filename_in = args.input_file
+        output_dir = args.output_dir if args.output_dir else './'
 
     # Read in data
     SNPs_by_chr = read_SNPs(args.input_file)
-    states = get_states(SNPs_by_chr, input_strain, True)
+    states = get_states(SNPs_by_chr, args.desc_strain, True)
 
     recomb_rate_dict = {}
-    if args.use_recomb_rates:
-        recomb_rate_dict = read_recomb_rates(WORKING_DIR + 'data/mouse_recomb_rates.csv')
-    strain_SVs_by_chr, anc_ins_by_chr, anc_del_by_chr = read_SVs(WORKING_DIR + 'data/' + input_strain +
-                                                                 '_structural-variants.bed',
-                                                                 WORKING_DIR + 'data/ancestor_insertions.bed',
-                                                                 WORKING_DIR + 'data/ancestor_deletions.bed')
+    use_recomb_rates = False
+    if args.recomb_rates_file:
+        recomb_rate_dict = read_recomb_rates(args.recomb_rates_file)
+        use_recomb_rates = True
+
+    desc_ins_by_chr = {}
+    desc_del_by_chr = {}
+    anc_ins_by_chr = {}
+    anc_del_by_chr = {}
+    if args.sv_insertions_file or args.sv_deletions_file:
+        if not (args.sv_insertions_file and args.sv_deletions_file):
+            raise Exception('Passed in either an SV insertions (-si) or SV deletions file (-sd), but missing the other')
+        desc_ins_by_chr, desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr = \
+            read_SVs(args.sv_insertions_file, args.sv_deletions_file, states, args.desc_strain)
 
     # Create lists of input parameters for grid searching (lists will be of size 1 if there is no range of values)
     trans_in_p_range = [args.trans_in_p]
@@ -312,6 +334,8 @@ if __name__ == '__main__':
         use_auto_str = True
 
     # Kickoff EM loop across all ranges of parameters
+    job_server = None
+    vit_func = None
     if args.parallel:
         job_server = pp.Server()
         vit_func = pp.Template(job_server, viterbi, depfuncs=(calc_recomb_rate, get_emit_key),
@@ -321,10 +345,14 @@ if __name__ == '__main__':
         for emit_same_p in emit_same_p_range:
             for adjust_recomb in adjust_recomb_range:
                 for unk_cutoff in unk_cutoff_range:
-                    append_str = '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff) \
-                                 if use_auto_str else args.append_str
-                    expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, args,
-                                             append_str, job_server, vit_func)
+                    append_str = ''
+                    if args.append_params:
+                        append_str += '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff)
+                    if args.append_date:
+                        append_str += datetime.now().strftime('_%y-%m-%d_%H-%M')
+                    expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, use_recomb_rates,
+                                             desc_ins_by_chr, desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr,
+                                             args, output_dir, append_str, job_server, vit_func)
 
     if args.parallel:
         job_server.wait()

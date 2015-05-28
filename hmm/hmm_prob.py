@@ -167,6 +167,9 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, desc_strain, unk_cutof
             elif ancestor != 'Unk':
                 # Find all other ancestors with counts >= the classified ancestor count
                 indent_ancestors = [k for k,v in SNP_counts.items() if v >= SNP_counts[ancestor] and k != 'Unk']
+                # Weird case where entire section is not consistent with descendant strain so counts are 0, very rare
+                if len(indent_ancestors) == 0:
+                    indent_ancestors = [ancestor]
 
                 # Add all IBD ancestors to back of classified ancestor
                 new_ancestors.extend(['_'.join(indent_ancestors)] * len(SNPs_section))
@@ -183,10 +186,7 @@ def score_results(ancestors_by_chr, SNPs_by_chr, desc_ins_by_chr, desc_del_by_ch
     # For every set of the ancestor SVs covering the same region
     #  If one of the ancestors is the classified ancestor, score a hit
     #  If none of the ancestors is the classified ancestor, score a miss
-    hits_by_chr = defaultdict(int)
-    misses_by_chr = defaultdict(int)
     all_scores_by_chr = defaultdict(list)
-
     for curr_chr, ancestors in ancestors_by_chr.items():
         # first score insertions, then score deletions
         for desc_SVs, anc_SVs, SV_type in ((desc_ins_by_chr[curr_chr], anc_ins_by_chr[curr_chr], 'Ins'),
@@ -195,22 +195,18 @@ def score_results(ancestors_by_chr, SNPs_by_chr, desc_ins_by_chr, desc_del_by_ch
             a_sv_ind = 0
             # loop over HMM classification blocks
             for pos_start, pos_end, ancestor in ancestor_blocks(ancestors, SNPs_by_chr[curr_chr]):
-                #print 'pos_start = %s, pos_end = %s, ancestor = %s' % (pos_start, pos_end, ancestor)
+                # can't score Unk classifications
+                if ancestor == 'Unk':
+                    continue
+
                 # if the descendant SV list is empty, we're done
                 if len(desc_SVs) == 0:
                     break
                 # walk to earliest descendant SV overlapping the current HMM block
                 while d_sv_ind < len(desc_SVs) and desc_SVs[d_sv_ind][1] < int(pos_start):
-                    #print 'less than:'
-                    #print 'desc end = ' + str(desc_SVs[d_sv_ind][1])
-                    #print 'pos_start = ' + str(pos_start)
-                    #print desc_SVs[d_sv_ind][1] < pos_start
-                    #print type(desc_SVs[d_sv_ind][1])
                     d_sv_ind += 1
-                    #print d_sv_ind
-                #print 'current SV = ' + str(desc_SVs[d_sv_ind])
-                #  if we're at the last descendant SV and it doesn't overlap, we're done
-                if d_sv_ind == len(desc_SVs)-1 and desc_SVs[d_sv_ind][1] < int(pos_start):
+                #  if we've looped through all the descendant SV's, we're done
+                if d_sv_ind == len(desc_SVs):
                     break
                 #  if the start of the current descendant SV is past the end of the HMM block, skip (no overlap)
                 if desc_SVs[d_sv_ind][0] > int(pos_end):
@@ -221,73 +217,70 @@ def score_results(ancestors_by_chr, SNPs_by_chr, desc_ins_by_chr, desc_del_by_ch
                 #  increment a tmp variable for this walk as the current descendant SV may overlap multiple HMM blocks
                 d_tmp_ind = d_sv_ind
                 while d_tmp_ind < len(desc_SVs) and desc_SVs[d_tmp_ind][0] < int(pos_end):
-                    #print 'current SV = ' + str(desc_SVs[d_tmp_ind])
                     # if the ancestor SV list is empty, score a miss
                     if len(anc_SVs) == 0:
                         # only append miss to all_scores if the current desc_SV hasn't been scored already (hits overwrite misses)
                         if len(all_scores_by_chr[curr_chr]) == 0:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
-                        elif all_scores_by_chr[curr_chr][-1][1] != desc_SVs[d_tmp_ind][0]:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
+                        elif pos_start != all_scores_by_chr[curr_chr][-1][0]:
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
                         d_tmp_ind += 1
-                        #print 'empty anc miss'
                         continue
                     # walk to earliest ancestor SV overlapping the current descendant SV
                     while a_sv_ind < len(anc_SVs) and anc_SVs[a_sv_ind][1] < desc_SVs[d_tmp_ind][0]:
                         a_sv_ind += 1
-                    #  if we're at the last ancestor SV and it doesn't overlap, score a miss
-                    if a_sv_ind == len(anc_SVs)-1 and anc_SVs[a_sv_ind][1] < desc_SVs[d_tmp_ind][0]:
+                    #  if we've looped through all the ancestor SV's, score a miss
+                    if a_sv_ind == len(anc_SVs):
                         # only append miss to all_scores if the current desc_SV hasn't been scored already (hits overwrite misses)
                         if len(all_scores_by_chr[curr_chr]) == 0:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
-                        elif all_scores_by_chr[curr_chr][-1][1] != desc_SVs[d_tmp_ind][0]:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
+                        elif pos_start != all_scores_by_chr[curr_chr][-1][0]:
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
                         d_tmp_ind += 1
-                        #print 'last anc no overlap miss'
                         continue
                     #  if start of current ancestor SV is past the end of the overlap region, score a miss (no overlap)
-                    elif anc_SVs[a_sv_ind][0] > desc_SVs[d_tmp_ind][1]:
+                    if anc_SVs[a_sv_ind][0] > desc_SVs[d_tmp_ind][1]:
                         # only append miss to all_scores if the current desc_SV hasn't been scored already (hits overwrite misses)
                         if len(all_scores_by_chr[curr_chr]) == 0:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
-                        elif all_scores_by_chr[curr_chr][-1][1] != desc_SVs[d_tmp_ind][0]:
-                            all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
+                        elif pos_start != all_scores_by_chr[curr_chr][-1][0]:
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
                         d_tmp_ind += 1
-                        #print 'anc past SV miss'
                         continue
                     # walk over every ancestor SV that overlaps the current descendant SV
                     #  increment a tmp variable for this walk as ancestor SVs can overlap multiple desc SVs
                     a_tmp_ind = a_sv_ind
-                    #print 'current anc insertion: ' + str(anc_SVs[a_tmp_ind])
                     while a_tmp_ind < len(anc_SVs) and anc_SVs[a_tmp_ind][0] < desc_SVs[d_tmp_ind][1]:
                         if anc_SVs[a_tmp_ind][1] > desc_SVs[d_tmp_ind][0]:
-                            #print 'anc_SVs list:'
-                            #print anc_SVs[a_tmp_ind][2]
-                            #print 'ancestor = ' + ancestor
                             # check if any ancestor SVs match the HMM output
                             for anc in ancestor.split('_'):
                                 if anc in anc_SVs[a_tmp_ind][2]:
                                     # if the current desc_SV has already been scored, overwrite with a hit
                                     if len(all_scores_by_chr[curr_chr]) == 0:
-                                        all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Hit'))
-                                    elif all_scores_by_chr[curr_chr][-1][0] == desc_SVs[d_tmp_ind][0]:
-                                        all_scores_by_chr[curr_chr][-1] = (desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Hit')
+                                        all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Hit'))
+                                    elif pos_start == all_scores_by_chr[curr_chr][-1][0]:
+                                        all_scores_by_chr[curr_chr][-1] = (pos_start, pos_end, SV_type, 'Hit')
                                     else:
-                                        all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Hit'))
-                                    #print '-------FOUND--------'
+                                        all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Hit'))
                                     break
+                            # clever way to break out of both for loops (taken from stackoverflow)
                             else:
                                 a_tmp_ind += 1
                                 continue
                             break
                         a_tmp_ind += 1
+                    # if we reach this else statement, the while loop never called break, so must be a miss
                     else:
-                        # if we reach this else statement, the while loop never called break, so must be a miss
-                        #print 'looped through and didn\'t find ancestor miss'
-                        all_scores_by_chr[curr_chr].append((desc_SVs[d_tmp_ind][0], desc_SVs[d_tmp_ind][1], SV_type, 'Miss'))
+                        # only append miss to all_scores if the current desc_SV hasn't been scored already (hits overwrite misses)
+                        if len(all_scores_by_chr[curr_chr]) == 0:
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
+                        elif pos_start != all_scores_by_chr[curr_chr][-1][0]:
+                            all_scores_by_chr[curr_chr].append((pos_start, pos_end, SV_type, 'Miss'))
                     d_tmp_ind += 1
 
     # Count total hits and misses
+    hits_by_chr = defaultdict(int)
+    misses_by_chr = defaultdict(int)
     for curr_chr, all_scores in all_scores_by_chr.items():
         for score in all_scores:
             if score[3] == 'Hit':

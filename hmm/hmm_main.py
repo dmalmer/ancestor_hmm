@@ -347,7 +347,7 @@ if __name__ == '__main__':
                 for unk_cutoff in unk_cutoff_range:
                     append_str = ''
                     if args.append_params:
-                        append_str += '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, adjust_recomb, unk_cutoff)
+                        append_str += '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, unk_cutoff, adjust_recomb)
                     if args.append_date:
                         append_str += datetime.now().strftime('_%y-%m-%d_%H-%M')
                     expectation_maximization(states, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, use_recomb_rates,

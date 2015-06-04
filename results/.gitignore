@@ -1,0 +1,4 @@
+
+# this is used to add an 'empty' directory to github
+*
+!.gitignore

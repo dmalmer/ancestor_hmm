@@ -5,16 +5,14 @@
 *.idx
 *.svg
 *.png
+*.sh
 
 old/*
 paper/*
-results/*
 igv/*
 acmbcb/*
 other/*
-
-deploy*.sh
-retrieve*.sh
+processing/*
 
 .*
 

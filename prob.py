@@ -4,7 +4,7 @@ from itertools import izip
 from math import log, e
 from numpy import mean
 
-from hmm_util import ancestor_blocks, get_emit_key, pairwise
+from util import ancestor_blocks, get_emit_key, pairwise
 
 
 # Calculate new transition probabilities

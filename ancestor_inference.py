@@ -7,9 +7,9 @@ from collections import namedtuple
 from datetime import datetime
 from time import time
 
-from anc_inf_prob import calc_recomb_rate, calc_new_emit_p
-from anc_inf_util import atof, create_grid_range, get_emit_key, get_states, read_recomb_rates, read_SNPs, read_SVs
-from anc_inf_hmm import expectation_maximization, viterbi
+from prob import calc_recomb_rate, calc_new_emit_p
+from util import atof, create_grid_range, get_emit_key, get_states, read_recomb_rates, read_SNPs, read_SVs
+from hmm import expectation_maximization, viterbi
 
 
 # Arguments
@@ -57,6 +57,11 @@ def read_arguments():
 
     parser.add_argument('-gs', '--grid-size', help='Number of items to divide a range of input values into', type=int,
                         default=2)
+
+    parser.add_argument('-ii', '--ignore-inconsistent', help='Ignore SNPs that are present in the ancestors, but not in '
+                                                             'the descendants. This can be useful when using SNP data '
+                                                             'that doesn\'t fully cover the genome (eg. SNP chip data).',
+                                                             action='store_true')
 
     parser.add_argument('-ad', '--append-date', help='Append date to output filename', action='store_true')
     parser.add_argument('-ap', '--append-params', help='Append string to output filename based on the input parameters',
@@ -106,33 +111,30 @@ if __name__ == '__main__':
         desc_ins_by_chr, desc_del_by_chr, anc_ins_by_chr, anc_del_by_chr = \
             read_SVs(args.sv_insertions_file, args.sv_deletions_file, states, args.desc_strain)
 
-    # Use a namedtuple for EM inputs to clean up function calls
-    StartParams = namedtuple('StartParams', ['desc_strain', 'states', 'use_recomb_rates', 'recomb_rate_dict', 'max_iter',
-                                             'prob_dist_cutoff', 'parallel', 'effective_pop', 'num_generations',
-                                             'desc_ins_by_chr', 'desc_del_by_chr', 'anc_ins_by_chr', 'anc_del_by_chr',
-                                             'write_iter', 'filename_in', 'output_dir', 'state_rgbs', 'time_start',
-                                             'verbose'])
-    start_params = StartParams(
-                        desc_strain=args.desc_strain,
-                        states=states,
-                        use_recomb_rates=use_recomb_rates,
-                        recomb_rate_dict=recomb_rate_dict,
-                        max_iter=args.max_iter,
-                        prob_dist_cutoff=args.prob_dist_cutoff,
-                        parallel=args.parallel,
-                        effective_pop=args.effective_pop,
-                        num_generations=args.num_generations,
-                        desc_ins_by_chr=desc_ins_by_chr,
-                        desc_del_by_chr=desc_del_by_chr,
-                        anc_ins_by_chr=anc_ins_by_chr,
-                        anc_del_by_chr=anc_del_by_chr,
-                        write_iter=args.write_iter,
-                        filename_in=filename_in,
-                        output_dir=output_dir,
-                        state_rgbs=STATE_RGBS,
-                        time_start=time_start,
-                        verbose=args.verbose
-                    )
+    # Use a dict for EM inputs to clean up function calls
+    # I would like to use a namedtuple here, but parallelpython doesn't seem to like them
+    start_params = {
+        'desc_strain': args.desc_strain,
+        'states': states,
+        'use_recomb_rates': use_recomb_rates,
+        'recomb_rate_dict': recomb_rate_dict,
+        'max_iter': args.max_iter,
+        'prob_dist_cutoff': args.prob_dist_cutoff,
+        'parallel': args.parallel,
+        'effective_pop': args.effective_pop,
+        'num_generations': args.num_generations,
+        'desc_ins_by_chr': desc_ins_by_chr,
+        'desc_del_by_chr': desc_del_by_chr,
+        'anc_ins_by_chr': anc_ins_by_chr,
+        'anc_del_by_chr': anc_del_by_chr,
+        'ignore_inconsistent': args.ignore_inconsistent,
+        'write_iter': args.write_iter,
+        'filename_in': filename_in,
+        'output_dir': output_dir,
+        'state_rgbs': STATE_RGBS,
+        'time_start': time_start,
+        'verbose': args.verbose
+    }
 
     # Create lists of input parameters for grid searching (lists will be of size 1 if there is no range of values)
     trans_in_p_range = [args.trans_in_p]

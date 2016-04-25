@@ -139,7 +139,7 @@ def prob_dist(old_probs, new_probs):
 
 
 # Reclassify all haplotype blocks that are identical by descent or likely from one of the two unknown strains
-def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, desc_strain, unk_cutoff):
+def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, desc_strain, use_unknown, unk_cutoff):
     # An ancestor is IBD to the classified ancestor if it has as many or more SNPs in a haplotype block
     #  as the classified ancestor
     # Alternatively, a haplotype block is likely from one of the unsequenced ancestors if a high percentage of SNPs are
@@ -152,7 +152,7 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, desc_strain, unk_cutof
             # Count the number of SNPs from each ancestor
             SNP_counts = defaultdict(int)
             for SNP in SNPs_section:
-                if SNP[3] == desc_strain:
+                if use_unknown and SNP[3] == desc_strain:
                     SNP_counts['Unk'] += 1
                 elif desc_strain in SNP[3]:
                     for anc in SNP[3].split('_'):
@@ -160,7 +160,7 @@ def reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, desc_strain, unk_cutof
                             SNP_counts[anc] += 1
 
             # First, check if haplotype block comes from an unsequenced ancestor 
-            if int(SNP_counts['Unk']) > 2 and SNP_counts['Unk'] >= unk_cutoff * SNP_counts[ancestor]:
+            if use_unknown and (int(SNP_counts['Unk']) > 2 and SNP_counts['Unk'] >= unk_cutoff * SNP_counts[ancestor]):
                 new_ancestors.extend(['Unk'] * len(SNPs_section))
 
             # If not, check if classified ancestor is IBD

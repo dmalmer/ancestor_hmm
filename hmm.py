@@ -67,7 +67,7 @@ def viterbi(SNPs, trans_p, emit_p, adjust_recomb, sp):
 
 
 # Expectation-Maximization loop
-def expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, append_str, sp,
+def expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb, use_unknown, unk_cutoff, append_str, sp,
                              job_server, vit_func):
     # Start, transition, and emission probabilities
     trans_p = {s_outer: {s_inner: log(trans_in_p) if s_inner == s_outer else log((1 - trans_in_p) / 6)
@@ -170,7 +170,7 @@ def expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb
 
     # Reclassify segments where segment likely came from an unsequenced ancestor or where SNP counts for multiple
     #  ancestors are identical
-    ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, sp['desc_strain'], unk_cutoff)
+    ancestors_by_chr = reclassify_ibd_and_unk(ancestors_by_chr, SNPs_by_chr, sp['desc_strain'], use_unknown, unk_cutoff)
 
     print '\nTotal time (min): ' + str((time() - sp['time_start'])/60)
     print 'Total runs: ' + str(run_count)

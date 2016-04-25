@@ -39,7 +39,9 @@ def read_arguments():
     parser.add_argument('-a', '--adjust-recomb', help='Multiplier to adjust expected number of recombinations (can be a '
                                                       'value or range of values in the form "[x-y]", which is divided '
                                                       'into parts with the -gs flag)', type=atof, default=1.)
-    parser.add_argument('-u', '--unk-cutoff', help='Cutoff for fraction of Unk SNPs required for an ancestor block to '
+    parser.add_argument('-u', '--use-unknown', help='Set to true to capture ungenotyped ancestors in an Unknown state', 
+                        type=bool, default=False)
+    parser.add_argument('-k', '--unk-cutoff', help='Cutoff for fraction of Unk SNPs required for an ancestor block to '
                                                    'be relabeled as Unk (can be a value or range of values in the form '
                                                    '"[x-y]", which is divided into parts with the -gs flag)', type=atof,
                                                    default=1.)
@@ -81,6 +83,9 @@ if __name__ == '__main__':
     # Constants
     STATE_RGBS = {'Unk': '128,128,128', 'A': '0,153,0', 'AKR': '51,102,255', 'BALBc': '255,255,51',
                   'C3HHe': '255,153,51', 'C57BL6N': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255'}
+    STATE_RGBS = {'Unk': '128,128,128', 'AJ': '0,153,0', 'AKRJ': '51,102,255', 'BALBcJ': '255,255,51',
+                  'C3HHeJ': '255,153,51', 'CBAJ': '102,0,204', 'DBA2': '255,51,51', 'IBA': '153,255,255',
+                  'CASTEiJ': '255,27,184', 'LPJ': '94,42,32'}
     
     # Read in arguments
     args = read_arguments()
@@ -93,7 +98,7 @@ if __name__ == '__main__':
 
     # Read in data
     SNPs_by_chr = read_SNPs(args.input_file)
-    states = get_states(SNPs_by_chr, args.desc_strain, True)
+    states = get_states(SNPs_by_chr, args.desc_strain, args.use_unknown)
 
     recomb_rate_dict = {}
     use_recomb_rates = False
@@ -174,8 +179,8 @@ if __name__ == '__main__':
                         append_str += '_%.2ft-%.2fe-%.2fu-%.2fa' % (trans_in_p, emit_same_p, unk_cutoff, adjust_recomb)
                     if args.append_date:
                         append_str += datetime.now().strftime('_%y-%m-%d_%H-%M')
-                    expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb, unk_cutoff, append_str,
-                                             start_params, job_server, vit_func)
+                    expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb, args.use_unknown, 
+                                             unk_cutoff, append_str, start_params, job_server, vit_func)
 
     if args.parallel:
         job_server.wait()

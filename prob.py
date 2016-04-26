@@ -63,13 +63,17 @@ def calc_new_emit_p(ancestors_by_chr, SNPs_by_chr, states, desc_strain, max_emit
             new_emit_p[s][s] = log(max_emit_same_p)
             new_emit_p[s]['~'+s] = log(1 - max_emit_same_p)
         else:
-            # Normalize <state> and <~state> probabilities to 1.0
-            state_p = float(ancestor_counts[s]) / SNP_counts[s]
-            notstate_p = float(ancestor_counts['~'+s]) / SNP_counts['~'+s]
-            normalizer = 1 / (state_p + notstate_p)
-            # Don't allow probabilities of 1.0 and 0.0
-            new_emit_p[s][s] = log(min(normalizer * state_p, max_emit_same_p))
-            new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, 1 - max_emit_same_p))
+            try:
+                # Normalize <state> and <~state> probabilities to 1.0
+                state_p = float(ancestor_counts[s]) / SNP_counts[s]
+                notstate_p = float(ancestor_counts['~'+s]) / SNP_counts['~'+s]
+                normalizer = 1 / (state_p + notstate_p)
+                # Don't allow probabilities of 1.0 and 0.0
+                new_emit_p[s][s] = log(min(normalizer * state_p, max_emit_same_p))
+                new_emit_p[s]['~'+s] = log(max(normalizer * notstate_p, 1 - max_emit_same_p))
+            except ZeroDivisionError:
+                new_emit_p[s][s] = log(max_emit_same_p)
+                new_emit_p[s]['~'+s] = log(1 - max_emit_same_p)
 
     # Take mean of each state to fix emission probabilities across states
     mean_same = mean([e ** new_emit_p[s][s] for s in states])

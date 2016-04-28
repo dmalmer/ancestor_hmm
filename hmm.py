@@ -159,7 +159,7 @@ def expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb
 
             # Output results (results during EM iterations will not have reclassified IBD and Unk)
             write_ancestors(sp['output_dir'], sp['filename_in'], append_str, ancestors_by_chr, SNPs_by_chr, sp['state_rgbs'])
-            write_statistics(sp['output_dir'], sp['filename_in'], append_str, ancestors_by_chr, SNPs_by_chr,
+            write_statistics(sp['output_dir'], sp['filename_in'], append_str, sp['states'], ancestors_by_chr, SNPs_by_chr,
                              (sp['use_recomb_rates'], trans_in_p, emit_same_p, trans_p, emit_p), final_score,
                              run_count, time() - sp['time_start'], tot_prob_dist)
 
@@ -201,6 +201,6 @@ def expectation_maximization(SNPs_by_chr, trans_in_p, emit_same_p, adjust_recomb
 
     # Output final results after reclassifying IBD and Unk
     write_ancestors(sp['output_dir'], sp['filename_in'], append_str, ancestors_by_chr, SNPs_by_chr, sp['state_rgbs'])
-    write_statistics(sp['output_dir'], sp['filename_in'], append_str, ancestors_by_chr, SNPs_by_chr, (sp['use_recomb_rates'],
-                     trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, time() - sp['time_start'],
-                     tot_prob_dist)
+    write_statistics(sp['output_dir'], sp['filename_in'], append_str, sp['states'], ancestors_by_chr, SNPs_by_chr, 
+                     (sp['use_recomb_rates'], trans_in_p, emit_same_p, trans_p, emit_p), final_score, run_count, 
+                     time() - sp['time_start'], tot_prob_dist)

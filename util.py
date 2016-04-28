@@ -252,7 +252,7 @@ def write_scores(working_dir, filename_in, append_str, all_scores_by_chr):
 
 
 # Write statistics of each run out to a file
-def write_statistics(working_dir, filename_in, append_str, ancestors_by_chr, SNPs_by_chr, starting_params,
+def write_statistics(working_dir, filename_in, append_str, states, ancestors_by_chr, SNPs_by_chr, starting_params,
                      final_score, run_count, tot_run_time, final_prob_dist):
     len_before = 0
     for SNPs in SNPs_by_chr.values():
@@ -273,15 +273,8 @@ def write_statistics(working_dir, filename_in, append_str, ancestors_by_chr, SNP
                 len_after,  # {4} - output file length
                 float(len_before-len_after)/len_before,  # {5} - percentage difference
             )
-    line += '{0:.3f}\t{1:.3f}\t{2:.3f}\t{3:.3f}\t{4:.3f}\t{5:.3f}\t{6:.3f}\t'.format(
-                anc_counts['A']/float(len_after),  # {0}
-                anc_counts['AKR']/float(len_after),  # {1}
-                anc_counts['BALBc']/float(len_after),  # {2}
-                anc_counts['C3HHe']/float(len_after),  # {3}
-                anc_counts['C57BL6N']/float(len_after),  # {4}
-                anc_counts['DBA2']/float(len_after),  # {5}
-                anc_counts['Unk']/float(len_after)  # {6}
-            )
+    state_percentages = '\t'.join(['%.3f' % (anc_counts[s]/float(len_after)) for s in states]) 
+    line += state_percentages
     line += '{0}\t{1:.2f}\t{2}\t{3}\t{4}\t{5}\t{6}\n'.format(
                 run_count,  # {0}
                 tot_run_time,  # {1}
@@ -294,28 +287,22 @@ def write_statistics(working_dir, filename_in, append_str, ancestors_by_chr, SNP
 
     filename_out = working_dir + filename_in.rsplit('.', 1)[0] + '_stats' + append_str + '.txt'
     if not isfile(filename_out):
-        header = '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\t{14}\t{15}\t{16}\t{17}\t' \
-                 '{18}\t{19}\n'.format(
-                    'Datetime',
-                    'Final_score',
-                    'Final_prob_dist',
-                    'Start_len',
-                    'Final_len',
-                    '%_diff',
-                    '%_A',
-                    '%_AKR',
-                    '%_BALBc',
-                    '%_C3HHe',
-                    '%_C57BL6N',
-                    '%_DBA2',
-                    '%_Unknown',
-                    'Run_count',
-                    'Total_run_time(s)',
-                    'Use_recomb_rates',
-                    'Start_trans_in',
-                    'Start_emit_same',
-                    'Final_trans_p',
-                    'Final_emit_p'
+        percentages_header = '\t'.join(['%%_%s' % s for s in states]) 
+        header = '{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}\t{7}\t{8}\t{9}\t{10}\t{11}\t{12}\t{13}\n'.format(
+                    'Datetime', # {0}
+                    'Final_score', # {1}
+                    'Final_prob_dist', # {2}
+                    'Start_len', # {3}
+                    'Final_len', # {4}
+                    '%_diff', # {5}
+                    percentages_header, # {6}
+                    'Run_count', # {7}
+                    'Total_run_time(s)', # {8}
+                    'Use_recomb_rates', # {9}
+                    'Start_trans_in', # {10}
+                    'Start_emit_same', # {11}
+                    'Final_trans_p', # {12}
+                    'Final_emit_p' # {13}
                 )
         line = header + line
 

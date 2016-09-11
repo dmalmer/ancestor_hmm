@@ -3,17 +3,37 @@
 
 A method for inferring ancestral haplotypes that allows for genotype data to be absent for zero, one, or more ancestors
 
-- [Overview](#overview)
+- [Introduction](#introduction)
 - [Usage](#usage)
+  - [Input file](#input-file)
+  - [Output file](#output-file)
+  - [Command line usage](#command-line-usage)
 - [Model](#model)
+  - [Overview](#overview)
+  - [Formal description](#formal-description)
+  - [Additional details](#additional-details)
 
-## Overview ##
+## Introduction ##
 
+Here we present a method for inferring haplotype ancestry in descendant strains bred from multiparent populations. 
+Through recombination, the descendant strains of multi-parent crosses are a mosaic of haplotypes inherited from their 
+inbred ancestors. Using a hidden Markov model described below, this program uses single nucleotide-polymorphism (SNP)
+data in the descendant and ancestor strains to infer the most likely ancestral origin of segments in the descendant's
+genome.
+
+Unique to this program, SNP information from one or more ancestors may be missing from the input data. Additionally, the
+program does not require knowledge of the breeding structure or recombination rates of organisms being studied. However, 
+recombination rates and the effective number of generations used during breeding may be supplied to better inform the model.
+
+This work was originally created for studying the genomes of Inbred Long-Sleep (ILS) and Inbred Short-Sleep (ILS) mice,
+where two out of the eight ancestor strains were unsequenced. The work is published in Dowell _et al._ "Genome
+Characterization of the Selected Long and Short Sleep Mouse Lines" _Mammalian Genome_ (2016). (doi 
+link forthcoming).
 
 
 ## Usage ##
 
-#### *Input file* ####
+#### _Input file_ ####
 
 The ancestor inference program takes as input a single BED format file containing chromosomal locations of homozygous
 single-nucleotide polymorphisms (SNPs) in each genotyped ancestor strain as well as SNPs in the descendant strain. SNPs 
@@ -35,7 +55,11 @@ chr1	3008143	3008144	A_AKR
 
 In addition, the program needs to know which strain is the descedant strain. In the above example, this would be ISS.
 
-#### *Command line usage* ####
+
+#### _Output file_ ####
+
+
+#### _Command line usage_ ####
 
 ```
 usage: ancestor_inference.py [-h] -i INPUT_FILE -d DESC_STRAIN [-o OUTPUT_DIR]
@@ -119,7 +143,7 @@ arguments:
 
 In multi-parental populations, descendant strains inherit distinct haplotype blocks from each ancestor strain. The
 haploblocks, therefore, contain identifying genotypic markers present in the originating ancestor, with slight
-modification due to \textit{de novo} mutations. Intuitively we can say that segments of the descendant's genome with
+modification due to _de novo_ mutations. Intuitively we can say that segments of the descendant's genome with
 consistent single-nucleotide polymorphisms (SNPs) primarily from a single ancestor were likely inherited from that
 ancestor and boundaries between haploblocks represent historical recombination events (Figure 1a).
 To probabilistically infer the most likely boundaries and ancestral origin of every such segment in a descendant's
@@ -147,7 +171,7 @@ contains a SNP from ancestor _S<sub>1</sub>_ and a SNP from the descendant, stat
 position. If a given position contains a SNP from the descendant, but not from ancestor _S<sub>1</sub>_, state _S<sub>1</sub>_ is given a
 low emission rate for that position. Lastly, if a given position contains a SNP from ancestor _S<sub>1</sub>_, but not from the
 descendant, state _S<sub>1</sub>_ is given a low emission rate for that position. We note that inconsistencies can arise from
-sequencing errors and \textit{de novo} mutations, so ancestor states still have emission rates greater than 0.0 at
+sequencing errors and _de novo_ mutations, so ancestor states still have emission rates greater than 0.0 at
 positions where the ancestor SNP data is inconsistent with the descendant SNP data. Transitions between distinct states
 correspond to recombination events during breeding, while transitions to the same state indicate adjacent SNPs belong to
 the same ancestral haploblock. As adjacent SNPs are likely to be from the same inherited region, we set the initial

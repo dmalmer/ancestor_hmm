@@ -15,7 +15,7 @@ A method for inferring ancestral haplotypes that allows for genotype data to be 
 
 ## Introduction ##
 
-Here we present a method for inferring haplotype ancestry in descendant strains bred from multiparent populations. 
+Here we present a method for inferring haplotype ancestry in descendant strains bred from multi-parent populations. 
 Through recombination, the descendant strains of multi-parent crosses are a mosaic of haplotypes inherited from their 
 inbred ancestors. Using a hidden Markov model described below, this program uses single nucleotide-polymorphism (SNP)
 data in the descendant and ancestor strains to infer the most likely ancestral origin of segments in the descendant's
@@ -25,10 +25,9 @@ Unique to this program, SNP information from one or more ancestors may be missin
 program does not require knowledge of the breeding structure or recombination rates of organisms being studied. However, 
 recombination rates and the effective number of generations used during breeding may be supplied to better inform the model.
 
-This work was originally created for studying the genomes of Inbred Long-Sleep (ILS) and Inbred Short-Sleep (ILS) mice,
+This work was originally created for studying the genomes of Inbred Long-Sleep (ILS) and Inbred Short-Sleep (ISS) mice,
 where two out of the eight ancestor strains were unsequenced. The work is published in Dowell _et al._ "Genome
-Characterization of the Selected Long and Short Sleep Mouse Lines" _Mammalian Genome_ (2016). (doi 
-link forthcoming).
+Characterization of the Selected Long and Short Sleep Mouse Lines" _Mammalian Genome_ (2016).
 
 
 ## Usage ##
@@ -38,25 +37,37 @@ link forthcoming).
 The ancestor inference program takes as input a single BED format file containing chromosomal locations of homozygous
 single-nucleotide polymorphisms (SNPs) in each genotyped ancestor strain as well as SNPs in the descendant strain. SNPs 
 shared by multiple ancestors and/or the descendant are separated with an underscore in the fourth column of the BED file.
-For example, if the strain ISS is descended from strains A, AKR, and DBA2, and segment of the input BED file might look 
-like:
+For example, the beginning of the ISS input file looks like:
 
 ```
-chr1	3001278	3001279	A_AKR
-chr1	3001770	3001771	A_AKR
-chr1	3007280	3007281	ILS_DBA2
-chr1	3007334	3007335	AKR
-chr1	3007757	3007758	ISS_DBA2
-chr1	3007852	3007853	ISS_DBA2
-chr1	3007889	3007890	ISS_DBA2
-chr1	3008068	3008069	ISS
-chr1	3008143	3008144	A_AKR
+chr1    3001278 3001279 C3HHe
+chr1    3001770 3001771 C3HHe
+chr1    3007280 3007281 ISS
+chr1    3007334 3007335 ISS_AKR_DBA2
+chr1    3007757 3007758 ISS_AKR_DBA2
 ```
 
-In addition, the program needs to know which strain is the descedant strain. In the above example, this would be ISS.
+Meaning, C3HHe contains a SNP in the first position not shared by any ancestors or the ISS strain, ISS contains a SNP in
+the third position not shared by any of the ancestor strains, and ISS, AKR, and DBA2 all contain a SNP in the fourth and
+fifth positions.
 
 
 #### _Output file_ ####
+
+The program outputs another BED file containing regions classified as being inherited from an ancestor. For example,
+running the program on the ISS data might output: 
+
+```
+chr1	3001278	4610335	DBA2
+chr1	4610502	8133696	AKR
+chr1	8133749	8148378	Unk
+chr1	8148457	11598300	AKR
+chr1	11598590	11599319	Unk
+chr1	11599350	11834039	A_AKR_BALBc
+```
+
+Regions classified as being inherited from an unsequenced ancestor are labeled as "Unk". Regions where multiple
+ancestors are identical by descent have each ancestor labeled, separated by an underscore.
 
 
 #### _Command line usage_ ####
@@ -260,10 +271,11 @@ normalized to 1.0 (_Z<sub>i</sub>_).
 
 #### _Additional details_ ####
 
-Additionally, we identify regions within the descendant genome that are identical by descent (IBD). Sometimes large segments 
-of the ancestor genomes are identical and indistinguishable from one another. We sought to identify these regions within 
-the HMM output, where a particular ancestor is chosen (by Viterbi) based on little to no informative positions. In these 
-cases, there is no way to truly distinguish the ancestor of origin so we reclassify the segment as IBD.
+Additionally, we identify regions within the descendant genome that are identical by descent (IBD) in multiple ancestors. 
+Sometimes large segments of the ancestor genomes are identical and indistinguishable from one another. We sought to 
+identify these regions within the HMM output, where a particular ancestor is chosen (by Viterbi) based on little to no 
+informative positions. In these cases, there is no way to truly distinguish the ancestor of origin so we reclassify the 
+segment as IBD in multiple ancestors, with each ancestor separated by "\_" in the output BED file.
 
 Haplotypes in the descendant strain inherited from an ungenotyped ancestor may contain informative markers shared by other 
 ancestor strains. In these cases, the markers shows evidence for the region having originated from the shared ancestor 
